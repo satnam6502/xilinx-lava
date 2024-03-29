@@ -22,6 +22,7 @@ name:               xilinx-lava
 --                  | | | +--- code changes with no API change
 version:            6.0.0.0
 
+copyright:          Satnam Singh, 2024.
 -- A short (one-line) description of the package.
 synopsis:
     A library for the combinator-based design of systtems, especially hardware.
@@ -32,7 +33,7 @@ description: This combinator-based library supports APL-like combinator-style
 -- description:
 
 -- URL for the project homepage or repository.
-homepage:           http://fpcastle.com/lava
+homepage:           https://github.com/satnam6502/xilinx-lava
 
 -- The license under which the package is released.
 license:            BSD-2-Clause
@@ -68,7 +69,7 @@ library
     exposed-modules:  Lava
 
     -- Modules included in this library but not exported.
-    -- other-modules:
+    other-modules:    Lava.Combinators
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
