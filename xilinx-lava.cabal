@@ -72,7 +72,8 @@ library
     other-modules:    Lava.Combinators,
                       Lava.Graph,
                       Lava.Hardware,
-                      Lava.SystemVerilog
+                      Lava.SystemVerilog,
+                      Lava.Examples.NandGate
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

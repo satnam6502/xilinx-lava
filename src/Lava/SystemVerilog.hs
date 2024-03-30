@@ -9,7 +9,7 @@ module Lava.SystemVerilog
 where
 import Lava.Graph
 import Lava.Hardware
-
+import Control.Monad.State.Lazy 
 
 data VecDir = UpTo | DownTo
               deriving (Eq, Show)
@@ -24,7 +24,7 @@ data NetType (a::NetKind) where
 deriving instance Show (NetType a)
 deriving instance Eq (NetType a)
 
-data Net (a::NetKind) = NamedNet String (NetType a)
+data Net (a::NetKind) = NamedNet String
                       | LocalNet Int
                       deriving (Eq, Show)
 
@@ -82,4 +82,27 @@ and2SV (i0, i1)
   = do o <- mkNet
        mkNode (PrimitiveInstanceStatement (AndPrim [i0, i1] o))
        return o
+
+portDeclaration :: PortDirection -> String -> NetType a -> SV (Net a)
+portDeclaration portDir name typ
+  = do graph <- get
+       let gD = graphData graph
+           portList = ports gD
+           port = PortSpec portDir name typ
+       put (graph {graphData = gD{ports = portList ++ [port]}})
+       return (NamedNet name)
+
+input :: String -> NetType a -> SV (Net a)
+input = portDeclaration InputPort
+
+output :: String -> NetType a -> SV (Net a)
+output = portDeclaration OutputPort
+
+setModuleName :: String -> SV ()
+setModuleName name
+  = do graph <- get
+       let gD = graphData graph
+       when (moduleName gD /= "") $
+         error ("Module name already defined as: " ++ moduleName gD)
+       put (graph{graphData=gD{moduleName = name}})
 
