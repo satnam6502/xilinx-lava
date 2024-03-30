@@ -69,13 +69,16 @@ library
     exposed-modules:  Lava
 
     -- Modules included in this library but not exported.
-    other-modules:    Lava.Combinators
+    other-modules:    Lava.Combinators,
+                      Lava.Graph,
+                      Lava.Hardware,
+                      Lava.SystemVerilog
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.17.2.1
+    build-depends:    base ^>=4.17.2.1, mtl
 
     -- Directories containing source files.
     hs-source-dirs:   src
