@@ -1,108 +1,83 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 module Lava.SystemVerilog
 where
 import Lava.Graph
-import Lava.Hardware
-import Control.Monad.State.Lazy 
+import Lava.RTL
 
-data VecDir = UpTo | DownTo
-              deriving (Eq, Show)
+systemVerilog :: String -> RTL () -> [String]
+systemVerilog fileName topModule
+  = ["module " ++ name ++ "("] ++
+    declarePorts portList ++
+    ["  );"] ++
+    concatMap emitStatement components ++
+    ["endmodule: " ++ name]
+    where
+    graph = computeGraph (Netlist name Nothing []) topModule
+    gD = graphData graph
+    components = nodes graph
+    portList = ports gD
+    name = if moduleName gD == "" then fileName
+           else moduleName gD
 
-data NetKind = Bit | Vector NetKind
-               deriving (Eq, Show)
+declarePorts :: [PortSpec] -> [String]
+declarePorts [] = []
+declarePorts [p] = [declarePort "" p]
+declarePorts (p:ps) = declarePort "," p : declarePorts ps
 
-data NetType (a::NetKind) where
-   BitType :: NetType 'Bit
-   VecType :: Int -> VecDir -> Int -> NetType a -> NetType ('Vector a)
+declarePort :: String -> PortSpec -> String
+declarePort comma (PortSpec portDir name typ)
+  = "  " ++ showPortDir portDir ++ " " ++ showType typ ++ " " ++ name ++ comma ++ lint_waiver
+    where
+    lint_waiver = if length name < 2 then
+                    " // ri lint_check_waive MIN_NAME_LEN"
+                  else
+                    ""
+    showPortDir InputPort = "input"
+    showPortDir OutputPort = "output"
 
-deriving instance Show (NetType a)
-deriving instance Eq (NetType a)
+showType :: NetType -> String
+showType net
+  = case net of
+       BitType -> "logic"
+       VecType {} -> "logic" ++  showVecType net
 
-data Net (a::NetKind) = NamedNet String
-                      | LocalNet Int
-                      deriving (Eq, Show)
+showVecType :: NetType ->  String
+showVecType BitType = ""
+showVecType (VecType hi dir lo typ) = showVecIndexType hi dir lo ++ showVecType typ
 
-type Bit = Net 'Bit
+showVecIndexType :: Int -> VecDir -> Int -> String
+showVecIndexType hi DownTo lo = "[" ++ show hi ++ ":" ++ show lo ++ "]"
+showVecIndexType lo UpTo hi = "[" ++ show lo ++ ":" ++ show hi ++ "]"
 
-data Statement
-   = PrimitiveInstanceStatement PrimitiveInstance
-   | forall a. LocalNetDeclaration Int (NetType a)
-   | forall a. Delay Bit (Net a)
-   | forall a. Assignment (Net a)
+emitStatement :: (Int, Statement) -> [String]
+emitStatement (n, PrimitiveInstanceStatement inst) = instantiateComponent n inst
+emitStatement (_, LocalNetDeclaration n typ) = ["  " ++ showType typ ++ " net" ++ show n ++ ";"]
+emitStatement (_, Delay clk lhs rhs) = ["  always_ff @(posedge " ++ showNet clk ++ ") " ++ showNet lhs ++ " <= " ++ showNet rhs ++ ";"]
+emitStatement (_, Assignment lhs rhs) = ["  assign " ++ showNet lhs ++ " = " ++ showNet rhs ++ ";"]
 
--- SystemVerilog primitive gates, many of which take a variable
--- number of inputs.
-data PrimitiveInstance
-   = BufPrim  Bit Bit
-   | NotPrim  Bit Bit
-   | AndPrim  [Bit] Bit
-   | OrPrim   [Bit] Bit
-   | NorPrim  [Bit] Bit
-   | XorPrim  [Bit] Bit
-   | XnorPrim [Bit] Bit
-   deriving Show
+instantiateComponent :: Int -> PrimitiveInstance -> [String]
+instantiateComponent ic component
+  = case component of
+      BufPrim i o      ->  ["  buf buf_" ++ show ic ++ " " ++ showArgs [o, i] ++ ";"]
+      NotPrim i o      ->  ["  not not_" ++ show ic ++ " " ++ showArgs [o, i] ++ ";"]
+      AndPrim inputs o ->  ["  and and_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
+      OrPrim inputs o  ->  ["  or or_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
+      NorPrim inputs o  -> ["  nor nor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
+      XorPrim inputs o  -> ["  xor xor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
+      XnorPrim inputs o  -> [" xnor xnor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
 
-data PortDirection = InputPort | OutputPort
-                     deriving (Eq, Show)
+showNet :: Net a -> String
+showNet signal
+  = case signal of
+      NamedNet name _ -> name
+      LocalNet n _ -> "net" ++ show n
 
-data PortSpec = forall a . PortSpec PortDirection String (NetType a)
+showArgs :: [Net a] -> String
+showArgs args = "(" ++ (insertCommas (map showNet args)) ++ ")"
 
--- A netlist is represented as a list of components, a list of
--- port specifications and a tally of how many components are used
--- and how how many nets have been declared.
-data Netlist = Netlist {
-  moduleName :: String,
-  clockName :: Maybe String,
-  ports :: [PortSpec]
-  }
+insertString :: String -> [String] -> String
+insertString _ [] = []
+insertString _ [x] = x
+insertString s (x:xs) = (x ++ s) ++ insertString s xs
 
-type SV = Lava Netlist Statement
-
-instance Hardware SV Bit where
-  inv = invSV
-  and2 = and2SV
-
-mkNet :: SV Bit
-mkNet = LocalNet <$> mkEdge
-
-invSV :: Bit -> SV Bit
-invSV i
-  = do o <- mkNet
-       mkNode (PrimitiveInstanceStatement (NotPrim i o))
-       return o
-
-and2SV :: (Bit, Bit) -> SV Bit
-and2SV (i0, i1)
-  = do o <- mkNet
-       mkNode (PrimitiveInstanceStatement (AndPrim [i0, i1] o))
-       return o
-
-portDeclaration :: PortDirection -> String -> NetType a -> SV (Net a)
-portDeclaration portDir name typ
-  = do graph <- get
-       let gD = graphData graph
-           portList = ports gD
-           port = PortSpec portDir name typ
-       put (graph {graphData = gD{ports = portList ++ [port]}})
-       return (NamedNet name)
-
-input :: String -> NetType a -> SV (Net a)
-input = portDeclaration InputPort
-
-output :: String -> NetType a -> SV (Net a)
-output = portDeclaration OutputPort
-
-setModuleName :: String -> SV ()
-setModuleName name
-  = do graph <- get
-       let gD = graphData graph
-       when (moduleName gD /= "") $
-         error ("Module name already defined as: " ++ moduleName gD)
-       put (graph{graphData=gD{moduleName = name}})
-
+insertCommas :: [String] -> String
+insertCommas = insertString ", "

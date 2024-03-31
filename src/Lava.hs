@@ -3,8 +3,10 @@
 
 module Lava (module Lava.Combinators,
              module Lava.Hardware,
+             module Lava.RTL,
              module Lava.SystemVerilog)
 where
 import Lava.Combinators
 import Lava.Hardware
+import Lava.RTL
 import Lava.SystemVerilog

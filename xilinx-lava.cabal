@@ -72,6 +72,7 @@ library
     other-modules:    Lava.Combinators,
                       Lava.Graph,
                       Lava.Hardware,
+                      Lava.RTL,
                       Lava.SystemVerilog,
                       Lava.Examples.NandGate
 
