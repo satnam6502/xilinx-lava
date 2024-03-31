@@ -6,6 +6,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Lava.RTL
 where
@@ -19,16 +20,16 @@ data VecDir = UpTo | DownTo
 data NetKind = Bit | Vector NetKind
                deriving (Eq, Show)
 
-data NetType
+data NetType (a::NetKind)
   = BitType
-  | VecType Int VecDir Int NetType
+  | VecType Int VecDir Int (NetType a)
   deriving (Eq, Show)
 
-data Net (a::NetKind) = NamedNet String NetType
-                      | LocalNet Int NetType
+data Net (a::NetKind) = NamedNet String (NetType a)
+                      | LocalNet Int (NetType a)
                       deriving (Eq, Show)
 
-typeOfNet :: Net a -> NetType
+typeOfNet :: Net a -> NetType a
 typeOfNet (NamedNet _ typ) = typ
 typeOfNet (LocalNet _ typ) = typ
 
@@ -36,7 +37,7 @@ type Bit = Net 'Bit
 
 data Statement
    = PrimitiveInstanceStatement PrimitiveInstance
-   | LocalNetDeclaration Int NetType
+   | forall a . LocalNetDeclaration Int (NetType a)
    | forall a. Delay Bit (Net a) (Net a)
    | forall a. Assignment (Net a) (Net a)
 
@@ -55,7 +56,7 @@ data PrimitiveInstance
 data PortDirection = InputPort | OutputPort
                      deriving (Eq, Show)
 
-data PortSpec = PortSpec PortDirection String NetType
+data PortSpec = forall a . PortSpec PortDirection String (NetType a)
 
 -- A netlist is represented as a list of components, a list of
 -- port specifications and a tally of how many components are used
@@ -68,11 +69,13 @@ data Netlist = Netlist {
 
 type RTL = Lava Netlist Statement
 
-instance Hardware RTL Bit where
+instance Hardware RTL (Net 'Bit) where
+  inv :: Bit -> RTL Bit
   inv = invRTL
+  and2 :: (Bit, Bit) -> RTL Bit
   and2 = and2RTL
 
-mkNet :: NetType -> RTL Bit
+mkNet :: NetType a -> RTL (Net a)
 mkNet t
  = do e <- mkNewEdgeNumber
       return (LocalNet e t)
@@ -89,7 +92,7 @@ and2RTL (i0, i1)
        mkNode (PrimitiveInstanceStatement (AndPrim [i0, i1] o))
        return o
 
-input :: String -> NetType -> RTL (Net a)
+input :: String -> NetType a -> RTL (Net a)
 input name typ
   = do graph <- get
        let gD = graphData graph

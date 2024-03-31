@@ -3,8 +3,12 @@ where
 import Lava.Graph
 import Lava.RTL
 
-systemVerilog :: String -> RTL () -> [String]
-systemVerilog fileName topModule
+writeSystemVerilog :: String -> RTL () -> IO( )
+writeSystemVerilog fileName topModule
+  = writeFile fileName (unlines (systemVerilogText fileName topModule))
+
+systemVerilogText :: String -> RTL () -> [String]
+systemVerilogText fileName topModule
   = ["module " ++ name ++ "("] ++
     declarePorts portList ++
     ["  );"] ++
@@ -34,13 +38,13 @@ declarePort comma (PortSpec portDir name typ)
     showPortDir InputPort = "input"
     showPortDir OutputPort = "output"
 
-showType :: NetType -> String
+showType :: NetType a -> String
 showType net
   = case net of
        BitType -> "logic"
        VecType {} -> "logic" ++  showVecType net
 
-showVecType :: NetType ->  String
+showVecType :: NetType a ->  String
 showVecType BitType = ""
 showVecType (VecType hi dir lo typ) = showVecIndexType hi dir lo ++ showVecType typ
 

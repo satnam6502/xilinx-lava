@@ -67,14 +67,15 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  Lava
+                      Lava.Examples.NandGate
 
     -- Modules included in this library but not exported.
     other-modules:    Lava.Combinators,
                       Lava.Graph,
                       Lava.Hardware,
                       Lava.RTL,
-                      Lava.SystemVerilog,
-                      Lava.Examples.NandGate
+                      Lava.Simulation,
+                      Lava.SystemVerilog
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
