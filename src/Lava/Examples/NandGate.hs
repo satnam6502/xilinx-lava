@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
-module Lava.Examples.NandGate (nandGate, nandGateSV)
+{-# LANGUAGE ScopedTypeVariables #-}
+module Lava.Examples.NandGate (nandGate, nandGateTop)
 where
 import Lava
 
@@ -11,9 +12,6 @@ nandGateTop
   = do setModuleName "nandgate"
        a <- input "a" BitType
        b <- input "b" BitType
-       c <- nandGate (a, b) :: RTL Bit
+       c <- nandGate (a, b) 
        output "c" c
-
-nandGateSV :: IO ()
-nandGateSV = writeSystemVerilog "nandgate" nandGateTop
 

@@ -5,7 +5,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE InstanceSigs #-}
 
 module Lava.RTL
@@ -17,12 +16,13 @@ import Control.Monad.State.Lazy
 data VecDir = UpTo | DownTo
               deriving (Eq, Show)
 
-data NetKind = Bit | Vector NetKind
+data NetKind = Bit | Vector
                deriving (Eq, Show)
 
 data NetType (a::NetKind)
   = BitType
   | VecType Int VecDir Int (NetType a)
+  | VoidType
   deriving (Eq, Show)
 
 data Net (a::NetKind) = NamedNet String (NetType a)
@@ -56,15 +56,19 @@ data PrimitiveInstance
 data PortDirection = InputPort | OutputPort
                      deriving (Eq, Show)
 
-data PortSpec = forall a . PortSpec PortDirection String (NetType a)
+data PortSpec = forall (a::NetKind) . PortSpec PortDirection String (NetType a)
+
+data LocalDec = forall (a::NetKind) . LocalDec Int (NetType a)
 
 -- A netlist is represented as a list of components, a list of
 -- port specifications and a tally of how many components are used
 -- and how how many nets have been declared.
 data Netlist = Netlist {
   moduleName :: String,
-  clockName :: Maybe String,
-  ports :: [PortSpec]
+  clockName :: String,
+  clockUsed :: Bool,
+  ports :: [PortSpec],
+  localDecs :: [LocalDec]
   }
 
 type RTL = Lava Netlist Statement
@@ -73,11 +77,25 @@ instance Hardware RTL (Net 'Bit) where
   inv :: Bit -> RTL Bit
   inv = invRTL
   and2 :: (Bit, Bit) -> RTL Bit
-  and2 = and2RTL
+  and2 = binaryPrimitive AndPrim
+  or2 = binaryPrimitive OrPrim
+  xor2 = binaryPrimitive XorPrim
+  nor2 = binaryPrimitive NorPrim
+  xnor2 = binaryPrimitive XnorPrim
+  delay = delayRTL
+
+
+addLocalDec :: Int -> NetType a -> RTL ()
+addLocalDec n typ
+  = do graph <- get
+       let gD = graphData graph
+           lD =  localDecs gD
+       put (graph{graphData = gD{localDecs = (LocalDec n typ):lD}})
 
 mkNet :: NetType a -> RTL (Net a)
 mkNet t
  = do e <- mkNewEdgeNumber
+      addLocalDec e t
       return (LocalNet e t)
 
 invRTL :: Bit -> RTL Bit
@@ -86,13 +104,33 @@ invRTL i
        mkNode (PrimitiveInstanceStatement (NotPrim i o))
        return o
 
-and2RTL :: (Bit, Bit) -> RTL Bit
-and2RTL (i0, i1)
+binaryPrimitive :: ([Bit] -> Bit -> PrimitiveInstance) -> (Bit, Bit) -> RTL Bit
+binaryPrimitive primitive (i0, i1)
   = do o <- mkNet BitType
-       mkNode (PrimitiveInstanceStatement (AndPrim [i0, i1] o))
+       mkNode (PrimitiveInstanceStatement (primitive [i0, i1] o))
        return o
 
-input :: String -> NetType a -> RTL (Net a)
+getClockNet :: RTL Bit
+getClockNet
+  = do graph <- get
+       let gD = graphData graph
+       return (NamedNet (clockName gD) BitType)
+
+setClockUsed :: RTL ()
+setClockUsed
+  = do graph <- get
+       let gD = graphData graph
+       put (graph{graphData = gD{clockUsed = True}})
+
+delayRTL :: Net (a::NetKind) -> RTL (Net (a::NetKind))
+delayRTL i
+  = do o <- mkNet (typeOfNet i)
+       clk <- getClockNet
+       setClockUsed
+       mkNode (Delay clk i o)
+       return o
+
+input :: String -> NetType (a::NetKind) -> RTL (Net a)
 input name typ
   = do graph <- get
        let gD = graphData graph
@@ -101,10 +139,10 @@ input name typ
        put (graph {graphData = gD{ports = portList ++ [port]}})
        return (NamedNet name typ)
 
-assignment :: Net a -> Net a -> RTL ()
+assignment :: Net (a::NetKind) -> Net (a::NetKind) -> RTL ()
 assignment net expr = mkNode (Assignment net expr)
 
-output :: String -> Net a -> RTL ()
+output :: String -> Net (a::NetKind) -> RTL ()
 output name net
   = do graph <- get
        let gD = graphData graph
@@ -113,7 +151,7 @@ output name net
        put (graph {graphData = gD{ports = portList ++ [port]}})
        assignment (NamedNet name typ) net
     where
-    typ =typeOfNet net
+    typ = typeOfNet net
 
 setModuleName :: String -> RTL ()
 setModuleName name

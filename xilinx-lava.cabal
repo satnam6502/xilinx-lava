@@ -75,6 +75,7 @@ library
                       Lava.Hardware,
                       Lava.RTL,
                       Lava.Simulation,
+                      Lava.SimVal,
                       Lava.SystemVerilog
 
     -- LANGUAGE extensions used by modules in this package.
@@ -82,6 +83,8 @@ library
 
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.17.2.1,
+                      bv ^>= 0.5,
+                      vcd ^>=0.2.2,
                       mtl >= 2.2.2 && < 2.3
 
     -- Directories containing source files.
@@ -90,6 +93,8 @@ library
     -- Base language which the package is written in.
     default-language: Haskell2010
 
+-- Test basic features of Lava that don't require any external tools
+-- like SystemVerilog simulators.
 test-suite xilinx-lava-test
     -- Import common warning flags.
     import:           warnings
@@ -116,3 +121,33 @@ test-suite xilinx-lava-test
     build-depends:
         base ^>=4.17.2.1,
         xilinx-lava
+
+-- Lava tests that use the Verilator SystemVerilog simulator.
+test-suite test-verilator
+    -- Import common warning flags.
+    import:           warnings
+
+    -- Base language which the package is written in.
+    default-language: Haskell2010
+
+    -- Modules included in this executable, other than Main.
+    -- other-modules:
+
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+
+    -- The interface type and version of the test suite.
+    type:             exitcode-stdio-1.0
+
+    -- Directories containing source files.
+    hs-source-dirs:   test-verilator
+
+    -- The entrypoint to the test suite.
+    main-is:          Main.hs
+
+    -- Test dependencies.
+    build-depends:
+        base ^>=4.17.2.1,
+        bitvec >= 1.1.2.0,
+        xilinx-lava
+
