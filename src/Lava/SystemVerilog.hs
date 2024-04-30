@@ -181,7 +181,7 @@ cppDriver fileName
      "tb->trace(m_trace, 5);",
      "m_trace->open(\"" ++ fileName ++ ".vcd\");",
      "",
-     "tb->clk = 0;",
+     "tb->clk = 1;",
      "tb->eval();",
      "m_trace->dump(contextp->time());",
      "while(!Verilated::gotFinish()) {",
