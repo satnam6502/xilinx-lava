@@ -58,8 +58,11 @@ extra-doc-files:    CHANGELOG.md
 -- Extra source files to be distributed with the package, such as examples, or a tutorial module.
 -- extra-source-files:
 
+tested-with: GHC==9.4.8
+
 common warnings
     ghc-options: -Wall
+
 
 library
     -- Import common warning flags.
@@ -150,4 +153,3 @@ test-suite test-verilator
         base ^>=4.17.2.1,
         bitvec >= 1.1.2.0,
         xilinx-lava
-
