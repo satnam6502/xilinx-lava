@@ -23,5 +23,9 @@ nandgate_sim:
 	$(VERILATOR) +1800-2017ext+sv verilator.vlt --trace -Wall -cc --build --clk clk --top-module nandgate_sim nandgate.sv nandgate_sim.sv -exe nandgate_sim_driver.cpp
 	obj_dir/Vnandgate_sim +trace
 
+# Generate a GitHub CI workflow config file using haskell-ci.
+workflow:
+	haskell-ci github xilinx-lava.cabal
+
 clean:
 	rm -rf obj_dir
