@@ -26,22 +26,15 @@ copyright:          Satnam Singh, 2024.
 -- A short (one-line) description of the package.
 synopsis:
     A library for the combinator-based design of systems, especially hardware.
+
 description: This combinator-based library supports APL-like combinator-style
              description of circuits and other computations.
-
--- A longer description of the package.
--- description:
 
 -- URL for the project homepage or repository.
 homepage:           https://github.com/satnam6502/xilinx-lava
 
--- The license under which the package is released.
 license:            BSD-2-Clause
-
--- The file containing the license text.
 license-file:       LICENSE
-
--- The package author(s).
 author:             Satnam Singh
 
 -- An email address to which users can send suggestions, bug reports, and patches.
