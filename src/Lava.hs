@@ -6,7 +6,7 @@
 -- Stability:   experimental
 -- Portability: portable
 --
--- A DSL for digital hardware design in Haskell.
+-- The Lava module provides a DSL for digital hardware design.
 --
 
 module Lava (module Lava.Combinators,
