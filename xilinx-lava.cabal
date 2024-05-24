@@ -88,7 +88,7 @@ library
     build-depends:    base >=4.17.2.1,
                       bv ^>= 0.5,
                       vcd ^>=0.2.2,
-                      mtl >= 2.2.2 && < 2.3
+                      mtl >= 2.2.2
 
     -- Directories containing source files.
     hs-source-dirs:   src
