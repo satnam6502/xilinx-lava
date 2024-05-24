@@ -7,8 +7,19 @@ Tested with GHC versions 9.4.8 and 9.8.2.
 
 `xilinx-lava` is library that implements a domain specific language (DSL) digital hardware design, originally developed at Xilinx for producing FPGA designs with high-level layout information. The current version produces generic SystemVerilog code that can be used for any kind of digital hardware design project.
 
-## Installation
-You can use Lava to generate and simulate digital circuits without installing any extra external tools. To install Lava, first install the Haskell compiler [GHC](https://www.haskell.org/ghc/download.html) from any version from 9.4.8 to 9.8.2 inclusive (the versions tested by GitHub CI), and the [cabal](https://www.haskell.org/cabal/) Haskell package manager. One easy way you can install GHC and `cabal` is by using the [ghcup](https://www.haskell.org/ghcup/) tool. If you are not sure which version to install, pick 9.8.2. Also install `cabal` using `ghcup` (pick the latest, recommended version).
+## Install pre-requisites
+To install Lava first install the Haskell compiler [GHC](https://www.haskell.org/ghc/download.html) from any version from 9.4.8 to 9.8.2 inclusive (the versions tested by GitHub CI), and the [cabal](https://www.haskell.org/cabal/) Haskell package manager. One easy way you can install GHC and `cabal` is by using the [ghcup](https://www.haskell.org/ghcup/) tool. If you are not sure which version to install, pick 9.8.2. Also install `cabal` using `ghcup` (pick the latest, recommended version).
+
+
+## Installation with cabal
+If you want to just use Lava you can install it with the `cabal` package manager:
+
+```console
+$ cabal install xilinx-lava
+```
+
+## Installation from source
+Alternatively, the instructions below detail how to build the latest version of `xilinx-lava` from the source code at GitHub. This is what you will want to do if you want to work on the development of Lava.
 
 First, clone the `xilinx-lava` repo.
 
