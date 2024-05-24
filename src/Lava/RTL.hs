@@ -12,7 +12,7 @@ where
 import Lava.Graph
 import Lava.Hardware
 import Control.Monad ( when )
-import Control.Monad.State.Lazy
+import Control.Monad.State.Lazy (MonadState(put, get) )
 
 data VecDir = UpTo | DownTo
               deriving (Eq, Show)
