@@ -11,6 +11,7 @@ module Lava.RTL
 where
 import Lava.Graph
 import Lava.Hardware
+import Control.Monad ( when )
 import Control.Monad.State.Lazy
 
 data VecDir = UpTo | DownTo
