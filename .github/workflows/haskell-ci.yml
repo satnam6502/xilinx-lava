@@ -183,7 +183,7 @@ jobs:
           ${CABAL} -vnormal check
       - name: install verilator
         run: |
-             apt-get install -y verilator=5.012-1
+             apt-get install -y verilator
       - name: verilator tests
         run: |
             uname -a
