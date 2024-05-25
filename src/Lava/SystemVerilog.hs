@@ -162,6 +162,8 @@ writeSystemVerilogSimulation topModule simVals
     simFilename = fileName ++ "_sim.sv"
     ccpDriverFilename = fileName ++ "_sim_driver.cpp"
 
+-- For an example of a C++ Verilator driver example, see:
+-- https://github.com/verilator/verilator/blob/master/examples/make_tracing_c/sim_main.cpp
 cppDriver :: String -> [String]
 cppDriver fileName
   = ["#include <stdlib.h>",
@@ -169,6 +171,9 @@ cppDriver fileName
      "#include \"V" ++ fileName ++ ".h\"",
      "#include \"verilated.h\"",
      "#include \"verilated_vcd_c.h\"",
+     "",
+     "// Legacy function required only so linking works on Cygwin and MSVC++",
+     "double sc_time_stamp() { return 0; }",
      "",
      "int main(int argc, char **argv) {",
      "",
@@ -193,8 +198,8 @@ cppDriver fileName
      "  m_trace->dump(contextp->time());",
      "}",
      "m_trace->close();",
-     "delete tb;",
-     "exit(EXIT_SUCCESS);",
+     "contextp->statsPrintSummary();",
+     "return 0;",
      "}"
   ]
 
