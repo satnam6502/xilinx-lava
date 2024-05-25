@@ -181,8 +181,8 @@ jobs:
         run: |
           cd ${PKGDIR_xilinx_lava} || false
           ${CABAL} -vnormal check
-          - name: install verilator
-          run: |
+      - name: install verilator
+        run: |
              apt-get install -y verilator
       - name: verilator tests
         run: |
