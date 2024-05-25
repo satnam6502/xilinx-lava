@@ -10,6 +10,17 @@ Tested with GHC versions 9.4.8 and 9.8.2.
 ## Install pre-requisites
 To install Lava first install the Haskell compiler [GHC](https://www.haskell.org/ghc/download.html) from any version from 9.4.8 to 9.8.2 inclusive (the versions tested by GitHub CI), and the [cabal](https://www.haskell.org/cabal/) Haskell package manager. One easy way you can install GHC and `cabal` is by using the [ghcup](https://www.haskell.org/ghcup/) tool. If you are not sure which version to install, pick 9.8.2. Also install `cabal` using `ghcup` (pick the latest, recommended version).
 
+The Lava DSL provides the capability to simulate synchronous circuits with a single clock. The simulate SystemVerilog circuits generated from Lava you will need to have a SystemVerilog simulator installed on your system. Lava provides built in support for [Verilator](https://www.veripool.org/verilator/), a freely available SystemVerilog simulator. On Linux you can install it with:
+
+```console
+$ sudo apt-get install verilator
+```
+
+On Mac OS X you can install it with [Homebrew](https://brew.sh/):
+
+```console
+$ brew install verilator
+```
 
 ## Installation with cabal
 If you want to just use Lava you can install it with the `cabal` package manager:
