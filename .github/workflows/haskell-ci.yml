@@ -193,7 +193,8 @@ jobs:
            apt-get install -y verilator
       - name: verilator tests
         run: |
-          verilator +1800-2017ext+sv $PKGDIR_xilinx_lava/verilator.vlt --trace -Wall -cc --build --clk clk --top-module nandgate_sim nandgate.sv nandgate_sim.sv -exe nandgate_sim_driver.cpp
+          ls ${PKGDIR_xilinx_lava}
+          verilator +1800-2017ext+sv ${PKGDIR_xilinx_lava}/verilator.vlt --trace -Wall -cc --build --clk clk --top-module nandgate_sim nandgate.sv nandgate_sim.sv -exe nandgate_sim_driver.cpp
           obj_dir/Vnandgate_sim +trace
       - name: save cache
         uses: actions/cache/save@v4
