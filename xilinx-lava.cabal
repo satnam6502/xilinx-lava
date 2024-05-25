@@ -54,6 +54,7 @@ extra-doc-files:    CHANGELOG.md
 tested-with: GHC==9.4.8, GHC==9.8.2
 
 data-files: verilator.vlt
+data-dir: ..
 
 common warnings
     ghc-options: -Wall
