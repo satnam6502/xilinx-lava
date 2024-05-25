@@ -190,7 +190,7 @@ jobs:
           $CABAL v2-build $ARG_COMPILER --disable-tests --disable-benchmarks all
       - name: install verilator
         run: |
-           apt-get install verilator
+           apt-get install -y verilator
       - name: verilator tests
         run: |
           cabal test
