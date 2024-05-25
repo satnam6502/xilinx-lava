@@ -132,9 +132,10 @@ systemVerilogSimulationText nl simVals
      outPorts ++
     ["  );",
      "",
-     "logic clk = 0;",
-     "always #10 clk <= ~clk;",
+     "  logic clk = 0;",
+     "  always #10 clk <= ~clk;",
      "  integer cycle = 0;",
+     "",
      "  always @(posedge " ++ clockName nl ++") begin: cycle_counter",
      "    if (cycle == " ++ show (n-1) ++ ") $finish(1);",
      "    else cycle <= cycle + 1;",
