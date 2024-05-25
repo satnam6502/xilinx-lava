@@ -58,8 +58,6 @@ data-files: verilator.vlt
 common warnings
     ghc-options: -Wall
 
-data-files: verilator.vlt
-
 library
     -- Import common warning flags.
     import:           warnings
