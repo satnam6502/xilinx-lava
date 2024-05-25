@@ -198,7 +198,6 @@ cppDriver fileName
      "  m_trace->dump(contextp->time());",
      "}",
      "m_trace->close();",
-     "contextp->statsPrintSummary();",
      "return 0;",
      "}"
   ]
