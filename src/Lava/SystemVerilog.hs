@@ -132,6 +132,8 @@ systemVerilogSimulationText nl simVals
      outPorts ++
     ["  );",
      "",
+     "logic clk = 0;",
+     "always #10 clk <= ~clk;",
      "  integer cycle = 0;",
      "  always @(posedge " ++ clockName nl ++") begin: cycle_counter",
      "    if (cycle == " ++ show (n-1) ++ ") $finish(1);",
@@ -141,13 +143,19 @@ systemVerilogSimulationText nl simVals
      "  " ++ name ++ " " ++ name ++ "_dut (.*);",
      ""] ++
      simTables inputPorts simVals ++
+     ["",
+     "  initial begin",
+     "    $dumpfile(\"" ++ simName ++ ".vcd\");",
+     "    $dumpvars;",
+     "  end",
+     ""] ++
      ["endmodule: " ++ simName]
     where
     n = length simVals
     name = moduleName nl
     simName = name ++ "_sim"
     inputPorts = [p | p@(PortSpec InputPort _ _) <- ports nl]
-    outPorts = declarePorts ((PortSpec InputPort (clockName nl) BitType):outputPorts)
+    outPorts = declarePorts outputPorts
     outputPorts = [p | p@(PortSpec OutputPort _ _) <- ports nl]
 
 
@@ -170,35 +178,23 @@ cppDriver fileName
      "#include <memory>",
      "#include \"V" ++ fileName ++ ".h\"",
      "#include \"verilated.h\"",
-     "#include \"verilated_vcd_c.h\"",
      "",
      "// Legacy function required only so linking works on Cygwin and MSVC++",
      "double sc_time_stamp() { return 0; }",
      "",
      "int main(int argc, char **argv) {",
      "",
-     "const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};",
-     "contextp->traceEverOn(true);",
-     "contextp->commandArgs(argc, argv);",
-     "",
      "V" ++ fileName ++ " *tb = new V" ++ fileName ++ ";",
-     "",
-     "VerilatedVcdC *m_trace = new VerilatedVcdC;",
-     "tb->trace(m_trace, 5);",
-     "m_trace->open(\"" ++ fileName ++ ".vcd\");",
+     "Verilated::traceEverOn(true);",
      "",
      "tb->clk = 1;",
      "tb->eval();",
-     "m_trace->dump(contextp->time());",
      "while(!Verilated::gotFinish()) {",
      "Verilated::timeInc(1);",
-     "  contextp->timeInc(1);",
      "  tb->clk ^= 1;",
      "  tb->eval();",
-     "  m_trace->dump(contextp->time());",
      "}",
      "tb->final();",
-     "m_trace->close();",
      "return 0;",
      "}"
   ]
