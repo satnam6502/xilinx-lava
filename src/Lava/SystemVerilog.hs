@@ -165,6 +165,7 @@ writeSystemVerilogSimulation topModule simVals
 cppDriver :: String -> [String]
 cppDriver fileName
   = ["#include <stdlib.h>",
+     "#include <memory>",
      "#include \"V" ++ fileName ++ ".h\"",
      "#include \"verilated.h\"",
      "#include \"verilated_vcd_c.h\"",
