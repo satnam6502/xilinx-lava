@@ -186,6 +186,7 @@ jobs:
              apt-get install -y verilator
       - name: verilator tests
         run: |
+            uname -a
             verilator -version
             cd unpacked/xilinx-lava-*
             verilator +1800-2017ext+sv verilator.vlt --trace -Wall -cc --build --clk clk --top-module nandgate_sim nandgate.sv nandgate_sim.sv -exe nandgate_sim_driver.cpp
