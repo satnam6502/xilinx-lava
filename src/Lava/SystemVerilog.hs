@@ -177,7 +177,7 @@ cppDriver fileName
      "",
      "int main(int argc, char **argv) {",
      "",
-     "const std::unique_ptr<Verilated::VerilatedContext> contextp{new Verilated::VerilatedContext};",
+     "const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};",
      "contextp->traceEverOn(true);",
      "contextp->commandArgs(argc, argv);",
      "",
@@ -197,6 +197,7 @@ cppDriver fileName
      "  tb->eval();",
      "  m_trace->dump(contextp->time());",
      "}",
+     "tb->final();",
      "m_trace->close();",
      "return 0;",
      "}"
