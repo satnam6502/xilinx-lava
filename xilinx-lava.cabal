@@ -56,6 +56,7 @@ tested-with: GHC==9.4.8, GHC==9.8.2
 common warnings
     ghc-options: -Wall
 
+data-files: verilator.vlt
 
 library
     -- Import common warning flags.
