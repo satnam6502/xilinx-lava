@@ -22,6 +22,13 @@ On Mac OS X you can install it with [Homebrew](https://brew.sh/):
 $ brew install verilator
 ```
 
+Check the major version number of `verilator` is at least 5. If your OS/platform only has install pacakages for an older version of `verilator` then you will need to build `verilator` [the source](https://github.com/verilator/verilator).
+
+```console
+$ verilator --version
+Verilator 5.012 2023-06-13 rev (Debian 5.012-1)
+```
+
 ## Installation with cabal
 If you want to just use Lava you can install it with the `cabal` package manager:
 
