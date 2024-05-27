@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes:
       60
+    container:
+        image: buildpack-deps:jammy
     continue-on-error: ${{ matrix.allow-failure }}
     strategy:
       matrix:
