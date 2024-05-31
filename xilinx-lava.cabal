@@ -79,7 +79,7 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base >= 4.17.2 && <= 4.19.1.0,
+    build-depends:    base >= 4.17.2 && <= 4.20.0.0,
                       bv ^>= 0.5,
                       vcd ^>=0.2.2,
                       mtl >= 2.2.2 && <= 2.3.1,
@@ -116,7 +116,7 @@ test-suite xilinx-lava-test
 
     -- Test dependencies.
     build-depends:
-        base >= 4.17.2 && <= 4.19.1.0,
+        base >= 4.17.2 && <= 4.20.0.0,
         xilinx-lava
 
 -- Lava tests that use the Verilator SystemVerilog simulator.
@@ -144,6 +144,6 @@ test-suite test-verilator
 
     -- Test dependencies.
     build-depends:
-        base >= 4.17.2 && <= 4.19.1.0,
+        base >= 4.17.2 && <= 4.20.0.0,
         bitvec >= 1.1.2.0,
         xilinx-lava
