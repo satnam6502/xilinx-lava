@@ -1,15 +1,16 @@
 name: Lava CI
-on:
-  - push
-  - pull_request
+on: [push]
+
+defaults:
+    run:
+      shell: bash
+
 jobs:
   linux:
-    name: Lava-CI - Linux - ${{ matrix.compiler }}
-    runs-on: ubuntu-22.04
+    name: Test Verilator
+    runs-on: ubuntu-24.04
     timeout-minutes:
-      60
-    container:
-        image: buildpack-deps:jammy
+        60
     continue-on-error: ${{ matrix.allow-failure }}
     strategy:
       matrix:
@@ -44,6 +45,7 @@ jobs:
           path: source
       - name: Build and test Lava
         run: |
+          find . -name "*.cabal"
           cd source
           cabal v2-test
           verilator +1800-2017ext+sv verilator.vlt --binary --trace -Wall --top-module nandgate_sim nandgate.sv nandgate_sim.sv
