@@ -1,7 +1,7 @@
 # xilinx-lava
 A Haskell library for combinator-based design of systems, especially digital hardware.
 
-![example workflow](https://github.com/satnam6502/xilinx-lava/actions/workflows/haskell-ci.yml/badge.svg)
+![example workflow](https://github.com/satnam6502/xilinx-lava/actions/workflows/lava-ci.yml/badge.svg)
 
 Tested with GHC versions 9.4.8 and 9.8.2.
 
