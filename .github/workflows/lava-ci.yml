@@ -23,23 +23,30 @@ jobs:
             allow-failure: false
       fail-fast: false
     steps:
-      - name: Attempt for restore GHC compiler from cache.
+      - name: Attempt to restore GHC compiler from cache.
         uses: actions/cache/restore@v4
         with:
              key: ${{ runner.os }}-${{ matrix.compiler }}
              path: ~/.ghcup/bin
       - name: Install GHC, cabal and verilator.
         run: |
+          echo "HOME = " $HOME
+          echo "github.workspace = " ${{ github.workspace }}
+          echo "GITHUB_WORKSPACE = " $GITHUB_WORKSPACE
+          ls -a ~
           export GHCUP_INSTALL_BASE_PREFIX=$HOME
           export PATH=$HOME/.ghcup/bin:$PATH
           mkdir -p "$HOME/.ghcup/bin"
           sudo chmod a+x "$HOME/.ghcup/bin/ghcup"
           ghcup install ghc ${{ matrix.compilerVersion }}
           ghcup set ghc ${{ matrix.compilerVersion }}
+          ghc --version
           ghcup install cabal 3.10.3.0
+          cabal init
           cabal v2-update
           sudo apt-get update
           sudo apt-get install -y verilator
+          verilator --version
       - name: Cache GHC compiler.
         uses: actions/cache/save@v4
         with:
