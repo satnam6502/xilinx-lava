@@ -23,6 +23,11 @@ jobs:
             allow-failure: false
       fail-fast: false
     steps:
+      - name: Attempt for restore GHC compiler from cache.
+        uses: actions/cache/restore@v4
+        with:
+             key: ${{ runner.os }}-${{ matrix.compiler }}
+             path: ~/.ghcup/bin
       - name: Install GHC, cabal and verilator.
         run: |
           export GHCUP_INSTALL_BASE_PREFIX=$HOME
@@ -35,13 +40,16 @@ jobs:
           cabal v2-update
           sudo apt-get update
           sudo apt-get install -y verilator
+      - name: Cache GHC compiler.
+        uses: actions/cache/save@v4
+        with:
+          key: ${{ runner.os }}-${{ matrix.compiler }}
       - name: Checkout Lava GitHub source
         uses: actions/checkout@v4
         with:
           path: source
       - name: Build and test Lava
         run: |
-          find . -name "*.cabal"
           cd source
           cabal v2-test
           verilator +1800-2017ext+sv verilator.vlt --binary --trace -Wall --top-module nandgate_sim nandgate.sv nandgate_sim.sv
