@@ -146,4 +146,6 @@ test-suite test-verilator
     build-depends:
         base >= 4.17.2 && <= 4.20.0.0,
         bitvec >= 1.1.2.0,
-        xilinx-lava
+        xilinx-lava,
+        process,
+        vcd ^>=0.2.2,

@@ -41,7 +41,6 @@ jobs:
           ghcup set ghc ${{ matrix.compilerVersion }}
           ghc --version
           ghcup install cabal 3.10.3.0
-          ls -a ~
           cabal v2-update
           sudo apt-get update
           sudo apt-get install -y verilator
@@ -59,4 +58,4 @@ jobs:
         run: |
           cd source
           cabal v2-test
-          verilator +1800-2017ext+sv verilator.vlt --binary --trace -Wall --top-module nandgate_sim nandgate.sv nandgate_sim.sv
+
