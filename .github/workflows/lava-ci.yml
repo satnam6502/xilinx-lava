@@ -44,6 +44,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           key: ${{ runner.os }}-${{ matrix.compiler }}
+          path: ~/.ghcup/bin
       - name: Checkout Lava GitHub source
         uses: actions/checkout@v4
         with:
