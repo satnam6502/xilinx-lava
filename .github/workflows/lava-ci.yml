@@ -33,7 +33,6 @@ jobs:
           echo "HOME = " $HOME
           echo "github.workspace = " ${{ github.workspace }}
           echo "GITHUB_WORKSPACE = " $GITHUB_WORKSPACE
-          ls -a ~
           export GHCUP_INSTALL_BASE_PREFIX=$HOME
           export PATH=$HOME/.ghcup/bin:$PATH
           mkdir -p "$HOME/.ghcup/bin"
@@ -42,9 +41,10 @@ jobs:
           ghcup set ghc ${{ matrix.compilerVersion }}
           ghc --version
           ghcup install cabal 3.10.3.0
-          cabal init
           cabal v2-update
           sudo apt-get update
+          cabal init
+          ls -a ~
           sudo apt-get install -y verilator
           verilator --version
       - name: Cache GHC compiler.
