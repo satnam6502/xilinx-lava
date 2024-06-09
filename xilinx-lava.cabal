@@ -81,7 +81,6 @@ library
     -- Other library packages from which modules are imported.
     build-depends:    base >= 4.17.2 && <= 4.20.0.0,
                       bv ^>= 0.5,
-                      vcd ^>=0.2.2,
                       mtl >= 2.2.2 && <= 2.3.1,
 
     -- Directories containing source files.
@@ -147,5 +146,4 @@ test-suite test-verilator
         base >= 4.17.2 && <= 4.20.0.0,
         bitvec >= 1.1.2.0,
         xilinx-lava,
-        process,
-        vcd ^>=0.2.2,
+        process

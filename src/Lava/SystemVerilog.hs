@@ -126,19 +126,35 @@ simTable (PortSpec _ name typ) simVals
     n = length simVals
     values = map showSimVal simVals
 
+writeOutput :: PortSpec -> String
+writeOutput (PortSpec _ name BitType) = "    $fdisplay(fd, \"%0b\", " ++ name ++ ");"
+writeOutput (PortSpec _ name (VecType _ _ _ _)) = "    $fdisplay(fd, \"%0h\", " ++ name ++ ");"
+writeOutput (PortSpec _ _ VoidType) = error "Attempt to display void type" 
+
 systemVerilogSimulationText :: Netlist -> [[SimVal a]] -> [String]
 systemVerilogSimulationText nl simVals
   = ["module " ++ simName  ++ "("] ++
      outPorts ++
     ["  );",
      "",
+     "  int fd;",
+     "  initial begin",
+     "    fd = $fopen(\"" ++ simName ++ ".txt\", \"w\");",
+     "  end",
+     "",
      "  logic clk = 0;",
      "  always #10 clk <= ~clk;",
      "  integer cycle = 0;",
      "",
-     "  always @(posedge " ++ clockName nl ++") begin: cycle_counter",
-     "    if (cycle == " ++ show (n-1) ++ ") $finish(1);",
-     "    else cycle <= cycle + 1;",
+     "  always @(posedge " ++ clockName nl ++") begin: cycle_counter"] ++
+     map writeOutput outputPorts ++ 
+    ["    if (cycle == " ++ show (n-1) ++ ") begin",
+     "      $fclose(fd);",
+     "      $finish(1);",
+     "    end",
+     "    else begin",
+     "      cycle <= cycle + 1;",
+     "    end",
      "  end: cycle_counter;",
      "",
      "  " ++ name ++ " " ++ name ++ "_dut (.*);",
@@ -162,42 +178,13 @@ systemVerilogSimulationText nl simVals
 
 writeSystemVerilogSimulation :: RTL () -> [[SimVal a]] -> IO ()
 writeSystemVerilogSimulation topModule simVals
-  = do writeFile simFilename (unlines (systemVerilogSimulationText nl simVals))
-       writeFile ccpDriverFilename (unlines (cppDriver (fileName ++ "_sim")))
+  = writeFile simFilename (unlines (systemVerilogSimulationText nl simVals))
     where
     graph = computeGraph (Netlist fileName "clk" False [] []) topModule
     nl = graphData graph
     fileName = moduleName nl
     simFilename = fileName ++ "_sim.sv"
-    ccpDriverFilename = fileName ++ "_sim_driver.cpp"
 
--- For an example of a C++ Verilator driver example, see:
--- https://github.com/verilator/verilator/blob/master/examples/make_tracing_c/sim_main.cpp
-cppDriver :: String -> [String]
-cppDriver fileName
-  = ["#include <stdlib.h>",
-     "#include <memory>",
-     "#include \"V" ++ fileName ++ ".h\"",
-     "#include \"verilated.h\"",
-     "",
-     "// Legacy function required only so linking works on Cygwin and MSVC++",
-     "double sc_time_stamp() { return 0; }",
-     "",
-     "int main(int argc, char **argv) {",
-     "",
-     "V" ++ fileName ++ " *tb = new V" ++ fileName ++ ";",
-     "Verilated::traceEverOn(true);",
-     "",
-     "tb->clk = 1;",
-     "tb->eval();",
-     "while(!Verilated::gotFinish()) {",
-     "Verilated::timeInc(1);",
-     "  tb->clk ^= 1;",
-     "  tb->eval();",
-     "}",
-     "tb->final();",
-     "return 0;",
-     "}"
-  ]
+
 
   

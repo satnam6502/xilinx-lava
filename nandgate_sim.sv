@@ -2,13 +2,24 @@ module nandgate_sim(
   output logic c // ri lint_check_waive MIN_NAME_LEN
   );
 
+  int fd;
+  initial begin
+    fd = $fopen("nandgate_sim.txt", "w");
+  end
+
   logic clk = 0;
   always #10 clk <= ~clk;
   integer cycle = 0;
 
   always @(posedge clk) begin: cycle_counter
-    if (cycle == 3) $finish(1);
-    else cycle <= cycle + 1;
+    $fdisplay(fd, "%0b", c);
+    if (cycle == 3) begin
+      $fclose(fd);
+      $finish(1);
+    end
+    else begin
+      cycle <= cycle + 1;
+    end
   end: cycle_counter;
 
   nandgate nandgate_dut (.*);
