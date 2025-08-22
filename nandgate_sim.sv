@@ -7,9 +7,11 @@ module nandgate_sim(
     fd = $fopen("nandgate_sim.txt", "w");
   end
 
-  logic clk = 0;
+  logic clk;
+  initial clk = 0;
   always #10 clk <= ~clk;
-  integer cycle = 0;
+  integer cycle;
+  initial cycle = 0;
 
   always @(posedge clk) begin: cycle_counter
     $fdisplay(fd, "%0b", c);

@@ -142,9 +142,11 @@ systemVerilogSimulationText nl simVals
      "    fd = $fopen(\"" ++ simName ++ ".txt\", \"w\");",
      "  end",
      "",
-     "  logic clk = 0;",
+     "  logic clk;",
+     "  initial clk = 0;",
      "  always #10 clk <= ~clk;",
-     "  integer cycle = 0;",
+     "  integer cycle;",
+     "  initial cycle = 0;",
      "",
      "  always @(posedge " ++ clockName nl ++") begin: cycle_counter"] ++
      map writeOutput outputPorts ++ 
