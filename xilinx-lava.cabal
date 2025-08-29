@@ -65,6 +65,7 @@ library
     -- Modules exported by the library.
     exposed-modules:  Lava
                       Lava.Examples.NandGate
+                      Lava.OneBitAdder
 
     -- Modules included in this library but not exported.
     other-modules:    Lava.Combinators,

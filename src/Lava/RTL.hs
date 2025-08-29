@@ -52,6 +52,8 @@ data PrimitiveInstance
    | NorPrim  [Bit] Bit
    | XorPrim  [Bit] Bit
    | XnorPrim [Bit] Bit
+   | XorcyPrim Bit Bit Bit -- ci li o
+   | MuxcyPrim Bit Bit Bit Bit -- ci di s o
    deriving Show
 
 data PortDirection = InputPort | OutputPort
@@ -65,11 +67,11 @@ data LocalDec = forall (a::NetKind) . LocalDec Int (NetType a)
 -- port specifications and a tally of how many components are used
 -- and how how many nets have been declared.
 data Netlist = Netlist {
-  moduleName :: String,
-  clockName :: String,
-  clockUsed :: Bool,
-  ports :: [PortSpec],
-  localDecs :: [LocalDec]
+  moduleName :: String,    -- `moduleName` is the name to be used for the generated SystemVerilog module.
+  clockName :: String,     -- `clockName` is the name of the clock net.
+  clockUsed :: Bool,       -- `clockUsed` is true if the circuit to be generated is sequential (contains registers) so it needs a clock input.
+  ports :: [PortSpec],     -- `ports` is a list of the input and output port definitions for the cirucit.
+  localDecs :: [LocalDec]  -- `localDecs` is a list of local signal declarations.
   }
 
 type RTL = Lava Netlist Statement
@@ -84,6 +86,8 @@ instance Hardware RTL (Net 'Bit) where
   nor2 = binaryPrimitive NorPrim
   xnor2 = binaryPrimitive XnorPrim
   delay = delayRTL
+  xorcy = binaryPrimitive' XorcyPrim
+  muxcy (s, (ci, di)) = input3Primitive MuxcyPrim (s, ci, di)
 
 
 addLocalDec :: Int -> NetType a -> RTL ()
@@ -109,6 +113,18 @@ binaryPrimitive :: ([Bit] -> Bit -> PrimitiveInstance) -> (Bit, Bit) -> RTL Bit
 binaryPrimitive primitive (i0, i1)
   = do o <- mkNet BitType
        mkNode (PrimitiveInstanceStatement (primitive [i0, i1] o))
+       return o
+
+binaryPrimitive' :: (Bit -> Bit -> Bit -> PrimitiveInstance) -> (Bit, Bit) -> RTL Bit
+binaryPrimitive' primitive (i0, i1)
+  = do o <- mkNet BitType
+       mkNode (PrimitiveInstanceStatement (primitive i0 i1 o))
+       return o
+
+input3Primitive :: (Bit -> Bit -> Bit -> Bit -> PrimitiveInstance) -> (Bit, Bit, Bit) -> RTL Bit
+input3Primitive primitive (i0, i1, i2)
+  = do o <- mkNet BitType
+       mkNode (PrimitiveInstanceStatement (primitive i0 i1 i2 o))
        return o
 
 getClockNet :: RTL Bit

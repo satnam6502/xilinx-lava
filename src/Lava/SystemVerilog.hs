@@ -86,6 +86,7 @@ instantiateComponent ic component
       NorPrim inputs o  -> ["  nor nor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
       XorPrim inputs o  -> ["  xor xor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
       XnorPrim inputs o  -> [" xnor xnor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
+      XorcyPrim cin part_sum o -> [" XORCY xorcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "LI", "O"] [cin, part_sum, o] ++ "; "]
 
 showNet :: Net a -> String
 showNet signal
@@ -95,6 +96,12 @@ showNet signal
 
 showArgs :: [Net a] -> String
 showArgs args = "(" ++ (insertCommas (map showNet args)) ++ ")"
+
+showNamedArgs :: [String] -> [Net a] -> String
+showNamedArgs names args =  "(" ++ insertCommas (map showNamedArg (zip names args)) ++ ")"
+
+showNamedArg :: (String, Net a) -> String
+showNamedArg (name, arg) = "." ++ name ++ "(" ++ showNet arg ++ ")"
 
 insertString :: String -> [String] -> String
 insertString _ [] = []
@@ -129,7 +136,7 @@ simTable (PortSpec _ name typ) simVals
 writeOutput :: PortSpec -> String
 writeOutput (PortSpec _ name BitType) = "    $fdisplay(fd, \"%0b\", " ++ name ++ ");"
 writeOutput (PortSpec _ name (VecType _ _ _ _)) = "    $fdisplay(fd, \"%0h\", " ++ name ++ ");"
-writeOutput (PortSpec _ _ VoidType) = error "Attempt to display void type" 
+writeOutput (PortSpec _ _ VoidType) = error "Attempt to display void type"
 
 systemVerilogSimulationText :: Netlist -> [[SimVal a]] -> [String]
 systemVerilogSimulationText nl simVals
@@ -149,7 +156,7 @@ systemVerilogSimulationText nl simVals
      "  initial cycle = 0;",
      "",
      "  always @(posedge " ++ clockName nl ++") begin: cycle_counter"] ++
-     map writeOutput outputPorts ++ 
+     map writeOutput outputPorts ++
     ["    if (cycle == " ++ show (n-1) ++ ") begin",
      "      $fclose(fd);",
      "      $finish(1);",
@@ -189,4 +196,3 @@ writeSystemVerilogSimulation topModule simVals
 
 
 
-  

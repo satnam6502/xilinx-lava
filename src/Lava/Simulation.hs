@@ -37,10 +37,15 @@ instance Hardware Sim [Bool] where
   or2 :: ([Bool], [Bool]) -> Sim [Bool]
   or2 = or2Sim
   xor2 :: ([Bool], [Bool]) -> Sim [Bool]
-  xor2 = or2Sim
+  xor2 = xor2Sim
   nor2 :: ([Bool], [Bool]) -> Sim [Bool]
   nor2 = nor2Sim
   xnor2 :: ([Bool], [Bool]) -> Sim [Bool]
   xnor2 = xnor2Sim
   delay :: [Bool] -> Sim [Bool]
   delay xs = return (False : xs)
+  xorcy ::  ([Bool], [Bool]) -> Sim [Bool]
+  xorcy = xor2Sim
+  muxcy :: ([Bool], ([Bool], [Bool])) -> Sim [Bool]
+  muxcy (s, (ci, di)) = return [if s' then ci' else di' | (s', (ci', di')) <- zip s (zip ci di)]
+
