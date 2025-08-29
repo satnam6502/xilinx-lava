@@ -87,6 +87,7 @@ instantiateComponent ic component
       XorPrim inputs o  -> ["  xor xor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
       XnorPrim inputs o  -> [" xnor xnor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
       XorcyPrim cin part_sum o -> [" XORCY xorcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "LI", "O"] [cin, part_sum, o] ++ "; "]
+      MuxcyPrim s ci di o -> [" MUXCY muxcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "DI", "S", "O"] [ci, di, s, o] ++ ";  "]
 
 showNet :: Net a -> String
 showNet signal
