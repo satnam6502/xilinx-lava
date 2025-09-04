@@ -24,7 +24,7 @@ module nandgate_sim(
     end
   end: cycle_counter;
 
-  nandgate nandgate_dut (.*);
+  altNandGate nandgate_dut (.*);
 
   logic a_vectors[4] = '{1'b0,1'b1,1'b0,1'b1}; // ri lint_check_waive INIT_ASSIGN
   logic a;

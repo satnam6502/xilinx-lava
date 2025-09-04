@@ -1,3 +1,3 @@
 `verilator_config
 lint_off -rule DECLFILENAME
-
+lint_off -rule TIMESCALEMOD

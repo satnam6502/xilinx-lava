@@ -6,6 +6,9 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Lava.RTL
 where
@@ -13,48 +16,60 @@ import Lava.Graph
 import Lava.Hardware
 import Control.Monad ( when )
 import Control.Monad.State.Lazy (MonadState(put, get) )
+import Data.Array.Ranked
+import GHC.TypeLits
+import GHC.TypeNats
+import Data.Proxy 
 
-data VecDir = UpTo | DownTo
-              deriving (Eq, Show)
-
-data NetKind = Bit | Vector
-               deriving (Eq, Show)
-
-data NetType (a::NetKind)
-  = BitType
-  | VecType Int VecDir Int (NetType a)
-  | VoidType
+data NetKind
+  = Bit
+  | VectorKind [Int] NetKind
   deriving (Eq, Show)
 
-data Net (a::NetKind) = NamedNet String (NetType a)
-                      | LocalNet Int (NetType a)
-                      deriving (Eq, Show)
+data NetType (a::NetKind) where
+  BitType :: NetType Bit
+  VecType :: [Int] -> NetType a -> NetType (VectorKind n a)
+
+deriving instance Eq (NetType a)
+deriving instance Show (NetType a)
+
+data Net (a::NetKind) where
+   Zero :: Net Bit
+   One :: Net Bit
+   NamedNet :: String -> NetType a -> Net a
+   LocalNet :: Int -> NetType a -> Net a
+   IndexedNet :: Int -> Net (VectorKind n a) -> NetType (VectorKind n a) -> Net a
+   VecLiteral :: forall (n :: Nat) a . KnownNat n => Array n (Net a) -> NetType  a -> Net a
 
 typeOfNet :: Net a -> NetType a
+typeOfNet Zero = BitType
+typeOfNet One = BitType
 typeOfNet (NamedNet _ typ) = typ
 typeOfNet (LocalNet _ typ) = typ
-
-type Bit = Net 'Bit
+typeOfNet (IndexedNet _ _ (VecType _ typ)) = typ
+typeOfNet (VecLiteral _ typ) = typ
 
 data Statement
    = PrimitiveInstanceStatement PrimitiveInstance
    | forall a . LocalNetDeclaration Int (NetType a)
-   | forall a. Delay Bit (Net a) (Net a)
+   | forall a. Delay (Net Bit) (Net a) (Net a)
    | forall a. Assignment (Net a) (Net a)
 
 -- SystemVerilog primitive gates, many of which take a variable
 -- number of inputs.
 data PrimitiveInstance
-   = BufPrim  Bit Bit
-   | NotPrim  Bit Bit
-   | AndPrim  [Bit] Bit
-   | OrPrim   [Bit] Bit
-   | NorPrim  [Bit] Bit
-   | XorPrim  [Bit] Bit
-   | XnorPrim [Bit] Bit
-   | XorcyPrim Bit Bit Bit -- ci li o
-   | MuxcyPrim Bit Bit Bit Bit -- ci di s o
-   deriving Show
+   = BufPrim  (Net Bit) (Net Bit)
+   | NotPrim  (Net Bit) (Net Bit)
+   | AndPrim  [Net Bit] (Net Bit)
+   | OrPrim   [Net Bit] (Net Bit)
+   | NorPrim  [Net Bit] (Net Bit)
+   | XorPrim  [Net Bit] (Net Bit)
+   | XnorPrim [Net Bit] (Net Bit)
+   | Xor2Prim (Net Bit) (Net Bit) (Net Bit)
+   | XorcyPrim (Net Bit) (Net Bit) (Net Bit) -- ci li o
+   | MuxcyPrim (Net Bit) (Net Bit) (Net Bit) (Net Bit) -- ci di s o
+   | Lut2Prim Int (Net Bit) (Net Bit) (Net Bit)
+   | Carry4Prim (Net Bit) (Net Bit) (Array 4 (Net Bit)) (Array 4 (Net Bit)) (Array 4 (Net Bit)) (Array 4 (Net Bit)) -- ci cyinit di s o co
 
 data PortDirection = InputPort | OutputPort
                      deriving (Eq, Show)
@@ -76,58 +91,101 @@ data Netlist = Netlist {
 
 type RTL = Lava Netlist Statement
 
-instance Hardware RTL (Net 'Bit) where
-  inv :: Bit -> RTL Bit
-  inv = invRTL
-  and2 :: (Bit, Bit) -> RTL Bit
-  and2 = binaryPrimitive AndPrim
-  or2 = binaryPrimitive OrPrim
-  xor2 = binaryPrimitive XorPrim
-  nor2 = binaryPrimitive NorPrim
-  xnor2 = binaryPrimitive XnorPrim
+instance Hardware RTL (Net Bit) where
+  zero :: RTL (Net Bit)
+  zero = return Zero
+  one :: RTL (Net Bit)
+  one = return One
+  invGate :: Net Bit -> RTL (Net Bit)
+  invGate = invRTL
+  andGate :: [Net Bit] -> RTL (Net Bit)
+  andGate = binaryPrimitive AndPrim
+  orGate :: [Net Bit] -> RTL (Net Bit)
+  orGate = binaryPrimitive OrPrim
+  xorGate :: [Net Bit] -> RTL (Net Bit)
+  xorGate = binaryPrimitive XorPrim
+  norGate :: [Net Bit] -> RTL (Net Bit)
+  norGate = binaryPrimitive NorPrim
+  xnorGate :: [Net Bit] -> RTL (Net Bit)
+  xnorGate = binaryPrimitive XnorPrim
+  delay :: Net Bit -> RTL (Net Bit)
   delay = delayRTL
+  xorcy :: (Net Bit, Net Bit) -> RTL (Net Bit)
   xorcy = binaryPrimitive' XorcyPrim
+  muxcy :: (Net Bit, (Net Bit, Net Bit)) -> RTL (Net Bit)
   muxcy (s, (ci, di)) = input3Primitive MuxcyPrim (s, ci, di)
-
+  lut2 :: (Bool -> Bool -> Bool) -> (Net Bit, Net Bit) -> RTL (Net Bit)
+  lut2 = lut2RTL
+  carry4 :: Net Bit -> Net Bit -> Array 4 (Net Bit) -> Array 4 (Net Bit) -> RTL (Array 4 (Net Bit), Array 4 (Net Bit))
+  carry4 = carry4RTL
 
 addLocalDec :: Int -> NetType a -> RTL ()
 addLocalDec n typ
   = do graph <- get
        let gD = graphData graph
            lD =  localDecs gD
-       put (graph{graphData = gD{localDecs = (LocalDec n typ):lD}})
+       put (graph{graphData = gD{localDecs = LocalDec n typ:lD}})
 
 mkNet :: NetType a -> RTL (Net a)
 mkNet t
  = do e <- mkNewEdgeNumber
-      addLocalDec e t
+      addLocalDec e t 
       return (LocalNet e t)
 
-invRTL :: Bit -> RTL Bit
+mkVecNet :: forall n a . KnownNat n => NetType a -> RTL (Array n (Net a))
+mkVecNet t
+  = do e <- mkNewEdgeNumber
+       addLocalDec e (VecType [n'] t)
+       let localNet = LocalNet e (VecType [n'] t)
+       return (fromList [n'] [IndexedNet i localNet (VecType [n'] t) | i <- [0..n'-1]])
+    where
+    n' = fromIntegral (GHC.TypeNats.natVal (Proxy @n))
+
+invRTL :: Net Bit -> RTL (Net Bit)
 invRTL i
   = do o <- mkNet BitType
        mkNode (PrimitiveInstanceStatement (NotPrim i o))
        return o
 
-binaryPrimitive :: ([Bit] -> Bit -> PrimitiveInstance) -> (Bit, Bit) -> RTL Bit
-binaryPrimitive primitive (i0, i1)
+binaryPrimitive :: ([Net Bit] -> Net Bit -> PrimitiveInstance) -> [Net Bit] -> RTL (Net Bit)
+binaryPrimitive primitive inputs
   = do o <- mkNet BitType
-       mkNode (PrimitiveInstanceStatement (primitive [i0, i1] o))
+       mkNode (PrimitiveInstanceStatement (primitive inputs o))
        return o
 
-binaryPrimitive' :: (Bit -> Bit -> Bit -> PrimitiveInstance) -> (Bit, Bit) -> RTL Bit
+binaryPrimitive' :: (Net Bit -> Net Bit -> Net Bit -> PrimitiveInstance) -> (Net Bit, Net Bit) -> RTL (Net Bit)
 binaryPrimitive' primitive (i0, i1)
   = do o <- mkNet BitType
        mkNode (PrimitiveInstanceStatement (primitive i0 i1 o))
        return o
 
-input3Primitive :: (Bit -> Bit -> Bit -> Bit -> PrimitiveInstance) -> (Bit, Bit, Bit) -> RTL Bit
+input3Primitive :: (Net Bit -> Net Bit -> Net Bit -> Net Bit -> PrimitiveInstance) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
 input3Primitive primitive (i0, i1, i2)
   = do o <- mkNet BitType
        mkNode (PrimitiveInstanceStatement (primitive i0 i1 i2 o))
        return o
 
-getClockNet :: RTL Bit
+boolVecToInt :: [Bool] -> Int
+boolVecToInt [] = 0
+boolVecToInt (False:xs) = 2 * boolVecToInt xs
+boolVecToInt (True:xs) =  1 + 2 * boolVecToInt xs
+
+lut2RTL :: (Bool -> Bool -> Bool) -> (Net Bit, Net Bit) -> RTL (Net Bit)
+lut2RTL f (i0, i1)
+  = do o <- mkNet BitType
+       mkNode (PrimitiveInstanceStatement (Lut2Prim (boolVecToInt progBits) i0 i1 o))
+       return o
+    where
+    progBits = [f b a | a <- [False, True], b <- [False, True]]
+
+carry4RTL :: Net Bit -> Net Bit -> Array 4 (Net Bit) -> Array 4 (Net Bit) -> RTL (Array 4 (Net Bit), Array 4 (Net Bit))
+carry4RTL ci cyinit di s
+  = do o <- mkVecNet BitType
+       co <- mkVecNet BitType
+       mkNode (PrimitiveInstanceStatement (Carry4Prim ci cyinit di s o co))
+       return (o, co)
+
+getClockNet :: RTL (Net Bit)
 getClockNet
   = do graph <- get
        let gD = graphData graph

@@ -83,6 +83,7 @@ library
     build-depends:    base >= 4.17.2 && <= 4.20.0.0,
                       bv ^>= 0.5,
                       mtl >= 2.2.2 && <= 2.3.1,
+                      orthotope ^>=  0.1.7.1,
 
     -- Directories containing source files.
     hs-source-dirs:   src

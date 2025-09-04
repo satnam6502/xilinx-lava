@@ -8,16 +8,12 @@ import Data.List (transpose)
 --------------------------------------------------------------------------------
 
 invGateTest :: Bool
-invGateTest = runSim (inv [False, True]) == map not [False, True]
+invGateTest = runSim (invGate [False, True]) == map not [False, True]
 
 --------------------------------------------------------------------------------
 
-pair2tuple :: [a] -> (a, a)
-pair2tuple [x, y] = (x, y)
-pair2tuple _ = error "pair2tuple"
-
-bool2Inputs :: ([Bool], [Bool])
-bool2Inputs = pair2tuple $ transpose [[x, y] | x <- [False, True], y <- [False, True]]
+bool2Inputs :: [[Bool]]
+bool2Inputs = transpose [[x, y] | x <- [False, True], y <- [False, True]]
 
 
 triple2tuple' :: [a] -> (a, (a, a))
@@ -29,11 +25,12 @@ bool3Inputs' = triple2tuple' $ transpose [[cin, x, y] | cin <- [False, True], x 
 
 --------------------------------------------------------------------------------
 
-nandGateGolden :: ([Bool], [Bool]) -> [Bool]
-nandGateGolden (xs, ys) = [not (x && y) | (x, y) <- zip xs ys]
+nandGateGolden :: [[Bool]] -> [Bool]
+nandGateGolden [xs, ys] = [not (x && y) | (x, y) <- zip xs ys]
+nandGateGolden _ = error "nandGateGolden"
 
 nandGateTest :: Bool
-nandGateTest = runSim (nandGate bool2Inputs) ==
+nandGateTest = runSim (altNandGate bool2Inputs) ==
                nandGateGolden bool2Inputs
 
 --------------------------------------------------------------------------------

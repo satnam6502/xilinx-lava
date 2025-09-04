@@ -1,4 +1,6 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE RankNTypes #-}
+
 
 module Lava.SystemVerilog (writeSystemVerilog, writeSystemVerilogSimulation)
 where
@@ -7,6 +9,9 @@ import Lava.RTL
 import Lava.SimVal
 import qualified Data.BitVector as BV
 import Data.List (transpose)
+import Data.Array.Ranked
+import GHC.TypeLits
+import Numeric (showHex)
 
 writeSystemVerilog :: RTL () -> IO ()
 writeSystemVerilog topModule
@@ -59,22 +64,22 @@ showType net
   = case net of
        BitType -> "logic"
        VecType {} -> "logic" ++  showVecType net
-       VoidType -> error "attempt to generate SystemVerilog for void type"
 
 showVecType :: NetType a ->  String
 showVecType BitType = ""
-showVecType (VecType hi dir lo typ) = showVecIndexType hi dir lo ++ showVecType typ
-showVecType VoidType = error "attempt to generate SystemVerilog array type for void type"
+showVecType (VecType idxs typ) = showVecIndexType idxs ++ showVecType typ
 
-showVecIndexType :: Int -> VecDir -> Int -> String
-showVecIndexType hi DownTo lo = "[" ++ show hi ++ ":" ++ show lo ++ "]"
-showVecIndexType lo UpTo hi = "[" ++ show lo ++ ":" ++ show hi ++ "]"
+showVecIndexType :: [Int] -> String
+showVecIndexType idxs = concat ["[" ++ show (hi-1) ++ ":0]" | hi <- idxs]
 
 emitStatement :: (Int, Statement) -> [String]
 emitStatement (n, PrimitiveInstanceStatement inst) = instantiateComponent n inst
 emitStatement (_, LocalNetDeclaration n typ) = ["  " ++ showType typ ++ " net" ++ show n ++ ";"]
 emitStatement (_, Delay clk lhs rhs) = ["  always_ff @(posedge " ++ showNet clk ++ ") " ++ showNet lhs ++ " <= " ++ showNet rhs ++ ";"]
 emitStatement (_, Assignment lhs rhs) = ["  assign " ++ showNet lhs ++ " = " ++ showNet rhs ++ ";"]
+
+intToHex :: Int -> String
+intToHex n = showHex n ""
 
 instantiateComponent :: Int -> PrimitiveInstance -> [String]
 instantiateComponent ic component
@@ -86,14 +91,30 @@ instantiateComponent ic component
       NorPrim inputs o  -> ["  nor nor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
       XorPrim inputs o  -> ["  xor xor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
       XnorPrim inputs o  -> [" xnor xnor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
-      XorcyPrim cin part_sum o -> [" XORCY xorcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "LI", "O"] [cin, part_sum, o] ++ "; "]
-      MuxcyPrim s ci di o -> [" MUXCY muxcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "DI", "S", "O"] [ci, di, s, o] ++ ";  "]
+      Xor2Prim cin part_sum o -> ["  XOR2 xor2_" ++ show ic ++ " " ++ showNamedArgs ["I0", "I1", "O"] [cin, part_sum, o] ++ "; "]
+      XorcyPrim cin part_sum o -> ["  XORCY xorcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "LI", "O"] [cin, part_sum, o] ++ "; "]
+      Lut2Prim config i0 i1 o -> [". LUT2 #(.INIT(4'h" ++ intToHex config ++ ")) " ++ " lut2_ " ++ show ic ++ showNamedArgs ["I0", "I1", "O"] [i0, i1, o] ]
+      MuxcyPrim s ci di o -> ["  MUXCY muxcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "DI", "S", "O"] [ci, di, s, o] ++ ";  "]
+      Carry4Prim ci cyinit di s o co -> ["  CARRY4 carry4_" ++ show ic ++ " (" ++
+                                         ".CI(" ++ showNet ci ++ "), " ++
+                                         ".CYINIT(" ++ showNet cyinit ++ "), " ++
+                                         ".DI(" ++ showArrayNet di ++ ")," ++
+                                         ".S(" ++ showArrayNet s ++ ")," ++
+                                         ".O(" ++ showArrayNet o ++ ")," ++
+                                         ".CO" ++ showArrayNet co ++ ");"]
 
 showNet :: Net a -> String
 showNet signal
   = case signal of
+      Zero -> "1'b0"
+      One -> "1'b1"
       NamedNet name _ -> name
       LocalNet n _ -> "net" ++ show n
+      IndexedNet i v _ -> showNet v ++ "[" ++ show i ++ "]"
+      VecLiteral a _ -> "{" ++ insertString "," (map showNet (reverse (toList a))) ++ "}"
+
+showArrayNet :: KnownNat n => Array n (Net a) -> String
+showArrayNet a = showNet (VecLiteral a undefined)
 
 showArgs :: [Net a] -> String
 showArgs args = "(" ++ (insertCommas (map showNet args)) ++ ")"
@@ -116,7 +137,7 @@ simTables :: [PortSpec] -> [[SimVal a]] -> [String]
 simTables portSpecs simVals
   = concat [simTable p v | (p, v) <- zip portSpecs transposedVals]
     where
-    transposedVals = transpose simVals
+    transposedVals = Data.List.transpose simVals
 
 showSimVal :: SimVal a -> String
 showSimVal L = "1'b0"
@@ -136,8 +157,7 @@ simTable (PortSpec _ name typ) simVals
 
 writeOutput :: PortSpec -> String
 writeOutput (PortSpec _ name BitType) = "    $fdisplay(fd, \"%0b\", " ++ name ++ ");"
-writeOutput (PortSpec _ name (VecType _ _ _ _)) = "    $fdisplay(fd, \"%0h\", " ++ name ++ ");"
-writeOutput (PortSpec _ _ VoidType) = error "Attempt to display void type"
+writeOutput (PortSpec _ name (VecType _ _)) = "    $fdisplay(fd, \"%0h\", " ++ name ++ ");"
 
 systemVerilogSimulationText :: Netlist -> [[SimVal a]] -> [String]
 systemVerilogSimulationText nl simVals
