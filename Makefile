@@ -20,7 +20,6 @@ publish:	sdist
 
 nandgate_sim:
 	cabal test
-	# $(VERILATOR) +1800-2017ext+sv verilator.vlt -trace -Wall -cc --build --clk clk --top-module nandgate_sim nandgate.sv nandgate_sim.sv -exe nandgate_sim_driver.cpp
 	$(VERILATOR) +1800-2017ext+sv verilator.vlt --timing --binary --trace -Wall -cc --build --clk clk --top-module nandgate_sim altNandGate.sv nandgate_sim.sv 
 	obj_dir/Vnandgate_sim +trace
 
@@ -30,7 +29,8 @@ onebitadd_sim:
 
 adder4-sim:
 	cabal test
-	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --lint-only adder4.sv
+	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal --top-module adder4_tb adder4.sv adder4_tb.sv
+	obj_dir/Vadder4_tb +trace
 
 synth:
 	vivado -mode batch -source nandgate.tcl
