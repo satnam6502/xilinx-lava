@@ -32,7 +32,10 @@ adder4-sim:
 	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal --top-module adder4_tb adder4.sv adder4_tb.sv
 	obj_dir/Vadder4_tb +trace
 
-synth:
+adder4-impl:
+	vivado -mode batch -source adder4.tcl
+
+nandgate-impl:
 	vivado -mode batch -source nandgate.tcl
 
 # Generate a GitHub CI workflow config file using haskell-ci.
