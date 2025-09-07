@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
+{-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
@@ -9,6 +11,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE NoStarIsType #-}
 
 module Lava.RTL
 where
@@ -16,14 +19,14 @@ import Lava.Graph
 import Lava.Hardware
 import Control.Monad ( when )
 import Control.Monad.State.Lazy (MonadState(put, get) )
-import Data.Array.Ranked
+import Data.Array.Shaped
 import GHC.TypeLits
 import GHC.TypeNats
 import Data.Proxy 
 
 data NetKind
   = Bit
-  | VectorKind [Int] NetKind
+  | VectorKind [Natural] NetKind
   deriving (Eq, Show)
 
 data NetType (a::NetKind) where
@@ -39,7 +42,7 @@ data Net (a::NetKind) where
    NamedNet :: String -> NetType a -> Net a
    LocalNet :: Int -> NetType a -> Net a
    IndexedNet :: Int -> Net (VectorKind n a) -> NetType (VectorKind n a) -> Net a
-   VecLiteral :: forall (n :: Nat) a . KnownNat n => Array n (Net a) -> NetType  a -> Net a
+   VecLiteral :: forall (n :: Nat) a . KnownNat n => Array '[n] (Net a) -> NetType (VectorKind '[n] a) -> Net (VectorKind '[n] a)
 
 typeOfNet :: Net a -> NetType a
 typeOfNet Zero = BitType
@@ -69,7 +72,7 @@ data PrimitiveInstance
    | XorcyPrim (Net Bit) (Net Bit) (Net Bit) -- ci li o
    | MuxcyPrim (Net Bit) (Net Bit) (Net Bit) (Net Bit) -- ci di s o
    | Lut2Prim Int (Net Bit) (Net Bit) (Net Bit)
-   | Carry4Prim (Net Bit) (Net Bit) (Array 4 (Net Bit)) (Array 4 (Net Bit)) (Array 4 (Net Bit)) (Array 4 (Net Bit)) -- ci cyinit di s o co
+   | Carry4Prim (Net Bit) (Net Bit) (Array '[4] (Net Bit)) (Array '[4] (Net Bit)) (Array '[4] (Net Bit)) (Array '[4] (Net Bit)) -- ci cyinit di s o co
 
 data PortDirection = InputPort | OutputPort
                      deriving (Eq, Show)
@@ -116,7 +119,7 @@ instance Hardware RTL (Net Bit) where
   muxcy (s, (ci, di)) = input3Primitive MuxcyPrim (s, ci, di)
   lut2 :: (Bool -> Bool -> Bool) -> (Net Bit, Net Bit) -> RTL (Net Bit)
   lut2 = lut2RTL
-  carry4 :: Net Bit -> Net Bit -> Array 4 (Net Bit) -> Array 4 (Net Bit) -> RTL (Array 4 (Net Bit), Array 4 (Net Bit))
+  carry4 :: Net Bit -> Net Bit -> Array '[4] (Net Bit) -> Array '[4] (Net Bit) -> RTL (Array '[4] (Net Bit), Array '[4] (Net Bit))
   carry4 = carry4RTL
 
 addLocalDec :: Int -> NetType a -> RTL ()
@@ -132,12 +135,12 @@ mkNet t
       addLocalDec e t 
       return (LocalNet e t)
 
-mkVecNet :: forall n a . KnownNat n => NetType a -> RTL (Array n (Net a))
+mkVecNet :: forall n a . KnownNat n => NetType a -> RTL (Array '[n] (Net a))
 mkVecNet t
   = do e <- mkNewEdgeNumber
        addLocalDec e (VecType [n'] t)
        let localNet = LocalNet e (VecType [n'] t)
-       return (fromList [n'] [IndexedNet i localNet (VecType [n'] t) | i <- [0..n'-1]])
+       return (fromList [IndexedNet i localNet (VecType [n'] t) | i <- [0..n'-1]])
     where
     n' = fromIntegral (GHC.TypeNats.natVal (Proxy @n))
 
@@ -178,7 +181,7 @@ lut2RTL f (i0, i1)
     where
     progBits = [f b a | a <- [False, True], b <- [False, True]]
 
-carry4RTL :: Net Bit -> Net Bit -> Array 4 (Net Bit) -> Array 4 (Net Bit) -> RTL (Array 4 (Net Bit), Array 4 (Net Bit))
+carry4RTL :: Net Bit -> Net Bit -> Array '[4] (Net Bit) -> Array '[4] (Net Bit) -> RTL (Array '[4] (Net Bit), Array '[4] (Net Bit))
 carry4RTL ci cyinit di s
   = do o <- mkVecNet BitType
        co <- mkVecNet BitType
@@ -214,6 +217,13 @@ input name typ
        put (graph {graphData = gD{ports = portList ++ [port]}})
        return (NamedNet name typ)
 
+inputVec :: forall n a . KnownNat n => String -> Int -> NetType (a::NetKind)  -> RTL (Array '[n] (Net a))
+inputVec name n typ
+  = do vecNet <- input name (VecType [n] typ)
+       return (fromList [IndexedNet i vecNet (VecType [n'] typ) | i <- [0..n'-1]])
+    where
+    n' = fromIntegral (GHC.TypeNats.natVal (Proxy @n))
+
 assignment :: Net (a::NetKind) -> Net (a::NetKind) -> RTL ()
 assignment net expr = mkNode (Assignment net expr)
 
@@ -227,6 +237,12 @@ output name net
        assignment (NamedNet name typ) net
     where
     typ = typeOfNet net
+
+outputVec :: forall n a . KnownNat n => String -> Array '[n] (Net a) -> NetType (a::NetKind) -> RTL ()
+outputVec name a typ
+  = output name (VecLiteral a (VecType [n'] typ))
+    where
+    n' = fromIntegral (GHC.TypeNats.natVal (Proxy @n))
 
 setModuleName :: String -> RTL ()
 setModuleName name

@@ -28,6 +28,10 @@ onebitadd_sim:
 	cabal test
 	$(VERILATOR) +1800-2017ext+sv verilator.vlt -y unisims --lint-only oneBitAdder.sv
 
+adder4-sim:
+	cabal test
+	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --lint-only adder4.sv
+
 synth:
 	vivado -mode batch -source nandgate.tcl
 

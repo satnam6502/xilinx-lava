@@ -1,6 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
-
+{-# LANGUAGE DataKinds #-}
 
 module Lava.SystemVerilog (writeSystemVerilog, writeSystemVerilogSimulation)
 where
@@ -9,7 +9,7 @@ import Lava.RTL
 import Lava.SimVal
 import qualified Data.BitVector as BV
 import Data.List (transpose)
-import Data.Array.Ranked
+import Data.Array.Shaped
 import GHC.TypeLits
 import Numeric (showHex)
 
@@ -63,7 +63,7 @@ showType :: NetType a -> String
 showType net
   = case net of
        BitType -> "logic"
-       VecType {} -> "logic" ++  showVecType net
+       VecType {} -> "logic" ++ showVecType net
 
 showVecType :: NetType a ->  String
 showVecType BitType = ""
@@ -93,15 +93,15 @@ instantiateComponent ic component
       XnorPrim inputs o  -> [" xnor xnor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
       Xor2Prim cin part_sum o -> ["  XOR2 xor2_" ++ show ic ++ " " ++ showNamedArgs ["I0", "I1", "O"] [cin, part_sum, o] ++ "; "]
       XorcyPrim cin part_sum o -> ["  XORCY xorcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "LI", "O"] [cin, part_sum, o] ++ "; "]
-      Lut2Prim config i0 i1 o -> [". LUT2 #(.INIT(4'h" ++ intToHex config ++ ")) " ++ " lut2_ " ++ show ic ++ showNamedArgs ["I0", "I1", "O"] [i0, i1, o] ]
       MuxcyPrim s ci di o -> ["  MUXCY muxcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "DI", "S", "O"] [ci, di, s, o] ++ ";  "]
+      Lut2Prim config i0 i1 o -> ["  LUT2 #(.INIT(4'h" ++ intToHex config ++ ")) lut2_" ++ show ic ++ showNamedArgs ["I0", "I1", "O"] [i0, i1, o] ++ ";  "]
       Carry4Prim ci cyinit di s o co -> ["  CARRY4 carry4_" ++ show ic ++ " (" ++
                                          ".CI(" ++ showNet ci ++ "), " ++
                                          ".CYINIT(" ++ showNet cyinit ++ "), " ++
                                          ".DI(" ++ showArrayNet di ++ ")," ++
                                          ".S(" ++ showArrayNet s ++ ")," ++
                                          ".O(" ++ showArrayNet o ++ ")," ++
-                                         ".CO" ++ showArrayNet co ++ ");"]
+                                         ".CO(" ++ showArrayNet co ++ "));"]
 
 showNet :: Net a -> String
 showNet signal
@@ -113,7 +113,7 @@ showNet signal
       IndexedNet i v _ -> showNet v ++ "[" ++ show i ++ "]"
       VecLiteral a _ -> "{" ++ insertString "," (map showNet (reverse (toList a))) ++ "}"
 
-showArrayNet :: KnownNat n => Array n (Net a) -> String
+showArrayNet :: KnownNat n => Array '[n] (Net a) -> String
 showArrayNet a = showNet (VecLiteral a undefined)
 
 showArgs :: [Net a] -> String

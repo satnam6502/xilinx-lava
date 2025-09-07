@@ -6,7 +6,7 @@
 module Lava.Simulation where
 import Control.Monad.Identity
 import Lava.Hardware
-import Data.Array.Ranked
+import Data.Array.Shaped
 
 type Sim = Identity
 
@@ -53,17 +53,17 @@ instance Hardware Sim [Bool] where
   xorcy (a, b) = xorGate [a, b]
   muxcy :: ([Bool], ([Bool], [Bool])) -> Sim [Bool]
   muxcy (s, (ci, di)) = return [if s' then ci' else di' | (s', (ci', di')) <- zip s (zip ci di)]
-  carry4 :: [Bool] -> [Bool] -> Array 4 [Bool] -> Array 4 [Bool] -> Sim (Array 4 [Bool], Array 4 [Bool])
+  carry4 :: [Bool] -> [Bool] -> Array '[4] [Bool] -> Array '[4] [Bool] -> Sim (Array '[4] [Bool], Array '[4] [Bool])
   carry4 = carry4ArraySim
   lut2 :: (Bool -> Bool -> Bool) -> ([Bool], [Bool]) -> Sim [Bool]
   lut2 f (i0, i1) = return [f a b | (a, b) <- zip i0 i1]
 
-carry4ArraySim:: [Bool] -> [Bool] -> Array 4 [Bool] -> Array 4 [Bool] -> Sim (Array 4 [Bool], Array 4 [Bool])
+carry4ArraySim:: [Bool] -> [Bool] -> Array '[4] [Bool] -> Array '[4] [Bool] -> Sim (Array '[4] [Bool], Array '[4] [Bool])
 carry4ArraySim ci cyinit di s
   =  do (o, co) <- carry4Sim ci cyinit (diL!!0, diL!!1, diL!!2, diL!!3) (sL!!0, sL!!1, sL!!2, sL!!3)
         let (o0, o1, o2, o3) = o
             (co0, co1, co2, co3) = co
-        return (fromList [4] [o0, o1, o2, o3], fromList [4] [co0, co1, co2, co3])
+        return (fromList [o0, o1, o2, o3], fromList [co0, co1, co2, co3])
      where
      diL = toList di
      sL = toList s
