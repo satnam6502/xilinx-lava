@@ -30,3 +30,7 @@ class Monad m => Hardware m bit | m -> bit where
 xor2 :: Hardware m bit => (bit, bit) -> m bit
 xor2 = lut2 (/=)
 
+-- a XOR (not b)
+xor2b2 :: Hardware m bit => (bit, bit) -> m bit
+xor2b2 = lut2 (\a b -> a /= (not b))
+

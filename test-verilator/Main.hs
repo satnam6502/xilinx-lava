@@ -5,7 +5,7 @@ import System.Process
 import Lava.Examples.NandGate
 import Lava.OneBitAdder
 import Lava.Adder4
-
+import Lava.Sub4
 main :: IO ()
 main
   = do writeSystemVerilog altNandGateTop
@@ -14,3 +14,4 @@ main
        callProcess "obj_dir/Vnandgate_sim" ["+trace"]
        writeSystemVerilog oneBitAdderTop
        writeSystemVerilog adder4Top
+       writeSystemVerilog sub4Top

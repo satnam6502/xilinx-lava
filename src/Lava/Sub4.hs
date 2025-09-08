@@ -13,16 +13,17 @@ sub4 a b
        ps3 :: bit <- xor2b2 (aL!!3, bL!!3)
        b0 <- zero
        b1 <- one
-       carry4 b0 b1 a (fromList [ps0, ps1, ps2, ps3])
+       (sumOut, carryOut) <- carry4 b0 b1 a (fromList [ps0, ps1, ps2, ps3])
+       return (sumOut, unScalar (carryOut `index` 3))
     where
     aL = toList a
     bL = toList b
 
 sub4Top :: RTL ()
 sub4Top
-  = do setModuleName "sub4Top"
+  = do setModuleName "sub4"
        a <- inputVec "a" 4 BitType
        b <- inputVec "b" 4 BitType
        (subOut, carryOut) <- sub4 a b
        outputVec "subOut" subOut BitType
-       output "carryOut" BitType
+       output "carryOut" carryOut

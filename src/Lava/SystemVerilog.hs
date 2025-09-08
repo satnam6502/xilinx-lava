@@ -28,11 +28,9 @@ systemVerilogText :: String -> RTL () -> [String]
 systemVerilogText fileName topModule
   = ["module " ++ name ++ "("] ++
     declarePorts portList ++
-    ["  );",
-     "  // BEGIN: local net declarations"
+    ["  );"
     ] ++
     ["  " ++ showType typ ++ " net" ++ show n ++ ";" | LocalDec n typ <- localDecs gD] ++
-    ["  // END: local net declarations"] ++
     concatMap emitStatement components ++
     ["endmodule: " ++ name]
     where
@@ -50,12 +48,8 @@ declarePorts (p:ps) = declarePort "," p : declarePorts ps
 
 declarePort :: String -> PortSpec -> String
 declarePort comma (PortSpec portDir name typ)
-  = "  " ++ showPortDir portDir ++ " " ++ showType typ ++ " " ++ name ++ comma ++ lint_waiver
+  = "  " ++ showPortDir portDir ++ " " ++ showType typ ++ " " ++ name ++ comma
     where
-    lint_waiver = if length name < 2 then
-                    " // ri lint_check_waive MIN_NAME_LEN"
-                  else
-                    ""
     showPortDir InputPort = "input"
     showPortDir OutputPort = "output"
 
@@ -147,7 +141,7 @@ showSimVal (Vec vals) = "{" ++ insertString "," (map showSimVal vals) ++ "}"
 
 simTable :: PortSpec -> [SimVal a] -> [String]
 simTable (PortSpec _ name typ) simVals
-  = ["  " ++ showType typ ++ " " ++ name ++ "_vectors[" ++ show n ++ "] = '{" ++ insertString "," values ++ "}; // ri lint_check_waive INIT_ASSIGN",
+  = ["  " ++ showType typ ++ " " ++ name ++ "_vectors[" ++ show n ++ "] = '{" ++ insertString "," values ++ "};",
      "  " ++ showType typ ++ " " ++ name ++ ";",
      "  assign " ++ name ++ " = " ++ name ++ "_vectors[cycle];"
     ]

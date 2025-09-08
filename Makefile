@@ -3,8 +3,9 @@ VERILATOR ?= verilator
 
 .PHONY: build doc sdist
 
-build:
-	cabal build
+all:	build test 
+
+build: test nandgate_sim onebitadd_sim onebitadd_sim adder4-sim
 
 doc:
 	cabal haddock
@@ -18,17 +19,17 @@ upload:	sdist
 publish:	sdist
 		cabal upload --publish dist-newstyle/sdist/xilinx-lava-$(VERSION).tar.gz
 
-nandgate_sim:
+test:
 	cabal test
+
+nandgate_sim:
 	$(VERILATOR) +1800-2017ext+sv verilator.vlt --timing --binary --trace -Wall -cc --build --clk clk --top-module nandgate_sim altNandGate.sv nandgate_sim.sv 
 	obj_dir/Vnandgate_sim +trace
 
 onebitadd_sim:
-	cabal test
 	$(VERILATOR) +1800-2017ext+sv verilator.vlt -y unisims --lint-only oneBitAdder.sv
 
 adder4-sim:
-	cabal test
 	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal --top-module adder4_tb adder4.sv adder4_tb.sv
 	obj_dir/Vadder4_tb +trace
 

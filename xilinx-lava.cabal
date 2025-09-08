@@ -67,6 +67,7 @@ library
                       Lava.Examples.NandGate
                       Lava.OneBitAdder
                       Lava.Adder4
+                      Lava.Sub4
 
     -- Modules included in this library but not exported.
     other-modules:    Lava.Combinators,
