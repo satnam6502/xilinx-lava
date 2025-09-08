@@ -1,0 +1,14 @@
+[options]
+
+[gold]
+read -sv adder4_golden.sv
+prep -top adder4
+
+[gate]
+read_verilog -DXIL_XECLIB unisims/CARRY4.v unisims/LUT2.v
+read_verilog -sv adder4.sv
+synth -top adder4
+
+[strategy simple]
+use sat
+depth 10
