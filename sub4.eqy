@@ -1,0 +1,15 @@
+[options]
+
+[gold]
+read -verific
+read -sv sub4_golden.sv
+prep -top sub4
+
+[gate]
+read -vlog2k -DXIL_XECLIB unisims/CARRY4.v unisims/LUT2.v
+read -sv sub4.sv
+synth -top sub4
+
+[strategy simple]
+use sat
+depth 10
