@@ -18,7 +18,8 @@ oneBitMux sel (a, b) = lut3 (\s x y -> (not s && x) || (s && y)) (sel, a, b)
 
 muxN :: (KnownNat n, Hardware m bit) => bit -> (Array '[n] bit, Array '[n] bit) -> m (Array '[n] bit)
 muxN sel (aV, bV)
-  = traverseA id (zipWithA (curry (oneBitMux sel)) aV bV)
+  -- = -- traverseA id (zipWithA (curry (oneBitMux sel)) aV bV)
+  = par (oneBitMux sel) (zipWithA (\a b -> (a, b)) aV bV)
 
 
 muxN8Top :: RTL ()

@@ -1,11 +1,19 @@
 {-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Generic combinators for system construction.
 
-module Lava.Combinators (module Control.Monad, fork, loop)
+module Lava.Combinators (module Control.Monad, fork, loop, par)
 where
 import Control.Monad.Fix (MonadFix)
 import Control.Monad ((>=>)) 
+import Data.Array.Shaped
+import GHC.TypeLits
 
 -- | Fork captures sharing. The input wire `a` is split
 --   into two wires, each containing the value of `a`.
@@ -21,3 +29,8 @@ loop :: MonadFix m => ((a, feedback) -> m (b, feedback)) ->
 loop circuit a
   = mdo (c, feedback) <- circuit (a, feedback)
         return c
+
+par :: (KnownNat n, Monad m) => (a -> m b) -> Array '[n] a -> m (Array '[n] b)
+par f a
+  = traverseA id (mapA f a)
+

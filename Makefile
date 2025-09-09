@@ -1,10 +1,11 @@
 VERSION=6.0.0.0
 VERILATOR ?= verilator
 
-.PHONY: build doc sdist test all formal pc
+.PHONY: build doc sdist test tests all formal pc
 
-all:	test nandgate_sim onebitadd_sim onebitadd_sim adder4-sim sub4-sim formal
+all:	test tests formal
         
+tests: nandgate_sim onebitadd_sim adder4-sim sub4-sim twoSorter-sim
 
 formal:	adder4-eqy sub4-eqy muxN8-eqy twoSorter-eqy
 
