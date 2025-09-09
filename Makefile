@@ -1,7 +1,7 @@
 VERSION=6.0.0.0
 VERILATOR ?= verilator
 
-.PHONY: build doc sdist test all formal
+.PHONY: build doc sdist test all formal pc
 
 all:	test nandgate_sim onebitadd_sim onebitadd_sim adder4-sim sub4-sim formal
         
@@ -59,6 +59,10 @@ muxN8-eqy:
 
 twoSorter-eqy:
 	eqy -f twoSorter.eqy
+
+pc:
+	cp *.sv /Volumes/ardberg/home/satnam/xilinx-lava
+	cp *.tcl /Volumes/ardberg/home/satnam/xilinx-lava
 
 # Generate a GitHub CI workflow config file using haskell-ci.
 workflow:

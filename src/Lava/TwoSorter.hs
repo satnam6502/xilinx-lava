@@ -15,9 +15,10 @@ import Lava.Sub4
 twoSorter ::  Hardware m bit => (Array '[4] bit, Array '[4] bit) ->
                                 m (Array '[4] bit, Array '[4] bit)
 twoSorter (a, b)
-  = do (_, cout) <- sub4 a b
-       x <- muxN cout (a, b)
-       y <- muxN cout (b, a)
+  = do (_, cout1) <- sub4 a b
+       x <- muxN cout1 (a, b)
+       (_, cout2) <- sub4 b a
+       y <- muxN cout2 (a, b)
        return (x, y)
 
 twoSorterTop :: RTL ()
