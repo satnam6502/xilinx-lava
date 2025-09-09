@@ -13,7 +13,9 @@
 
 -- | Generic combinators for system construction.
 
-module Lava.Combinators (module Control.Monad, fork, loop, par, halve, unhalve, pair, unpair, zipA)
+module Lava.Combinators (module Control.Monad,
+       fork, loop, par, halve, unhalve, pair, unpair, zipA, unzipA,
+       riffle, unriffle, two, evens, ilv)
 where
 import Control.Monad.Fix (MonadFix)
 import Control.Monad ((>=>)) 
@@ -36,9 +38,7 @@ loop circuit a
         return c
 
 par :: (KnownNat n, Monad m) => (a -> m b) -> Array '[n] a -> m (Array '[n] b)
-par f a
-  = traverseA id (mapA f a)
-
+par f a = traverseA id (mapA f a)
 
 halve :: forall a n. (KnownNat n, KnownNat (2*n)) => Array '[2 * n] a -> Array '[2] (Array '[n] a)
 halve = unravel . reshape @'[2, n]
@@ -54,3 +54,21 @@ unpair = reshape @'[2 * n] . ravel
 
 zipA :: forall a n. KnownNat n => Array '[2] (Array '[n] a) -> Array '[n] (Array '[2] a)
 zipA =  unravel . transpose @[1, 0] . ravel
+
+unzipA :: KnownNat n => Array '[n] (Array '[2] a) -> Array '[2] (Array '[n] a)
+unzipA =  unravel . transpose @[1, 0] . ravel
+
+riffle :: KnownNat n => Array '[2 * n] a -> Array '[2 * n] a
+riffle = unpair . zipA . halve
+
+unriffle :: KnownNat n => Array '[2 * n] a -> Array '[2 * n] a
+unriffle = unhalve . unzipA . pair
+
+two :: KnownNat n => (Array '[n] a ->  Array '[n] a) -> Array '[2 * n] a -> Array '[2 * n] a
+two f = unhalve . fmap f . halve
+
+evens :: KnownNat n => (Array '[2] a -> Array '[2] a) -> Array '[n * 2] a -> Array '[n * 2] a
+evens f =  unpair . fmap f . pair
+
+ilv :: KnownNat n => (Array '[n] a -> Array '[n] a) -> Array '[n * 2] a -> Array '[n * 2] a
+ilv r = riffle . two r . unriffle
