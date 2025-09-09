@@ -40,7 +40,7 @@ loop circuit a
 par :: (KnownNat n, Monad m) => (a -> m b) -> Array '[n] a -> m (Array '[n] b)
 par f a = traverseA id (mapA f a)
 
-halve :: forall a n. (KnownNat n, KnownNat (2*n)) => Array '[2 * n] a -> Array '[2] (Array '[n] a)
+halve :: forall a n. (KnownNat n, KnownNat (2 * n)) => Array '[2 * n] a -> Array '[2] (Array '[n] a)
 halve = unravel . reshape @'[2, n]
 
 unhalve :: forall a n. KnownNat n => Array '[2] (Array '[n] a) -> Array '[2 * n] a
