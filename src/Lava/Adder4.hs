@@ -21,7 +21,7 @@ adder4 a b
 adder4Top :: RTL ()
 adder4Top
   = do setModuleName "adder4"
-       a <- inputVec "a" 4 BitType
-       b <- inputVec "b" 4 BitType
+       a :: Array '[4] (Net Bit) <- inputVec "a" BitType
+       b :: Array '[4] (Net Bit) <- inputVec "b" BitType
        sumOut <- adder4 a b
        outputVec "sumOut" sumOut BitType

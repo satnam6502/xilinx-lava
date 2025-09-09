@@ -24,8 +24,8 @@ sub4 a b
 sub4Top :: RTL ()
 sub4Top
   = do setModuleName "sub4"
-       a <- inputVec "a" 4 BitType
-       b <- inputVec "b" 4 BitType
+       a :: Array '[4] (Net Bit)  <- inputVec "a" BitType
+       b :: Array '[4] (Net Bit)  <- inputVec "b" BitType
        (subOut, carryOut) <- sub4 a b
        outputVec "subOut" subOut BitType
        output "carryOut" carryOut

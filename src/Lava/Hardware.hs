@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise #-}
 {-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
@@ -9,7 +9,7 @@ module Lava.Hardware
 where
 import Data.Array.Shaped
 
-class Monad m => Hardware m bit | m -> bit where
+class Monad m => Hardware m bit where
   -- Generic gates
   zero :: m bit
   one :: m bit
@@ -25,6 +25,7 @@ class Monad m => Hardware m bit | m -> bit where
   xorcy :: (bit, bit) -> m bit -- (cin, li) -> partial sum
   muxcy :: (bit, (bit, bit)) -> m bit -- (s, (ci, di)) -> sum
   lut2 :: (Bool -> Bool -> Bool) -> (bit, bit) -> m bit
+  lut3 :: (Bool -> Bool -> Bool -> Bool) -> (bit, bit, bit) -> m bit
   carry4 :: bit -> bit -> Array '[4] bit -> Array '[4] bit -> m (Array '[4] bit, Array '[4] bit) -- ci -> cyinit -> (di, s) -> (o, co)
 
 xor2 :: Hardware m bit => (bit, bit) -> m bit

@@ -6,6 +6,7 @@ import Lava.Examples.NandGate
 import Lava.OneBitAdder
 import Lava.Adder4
 import Lava.Sub4
+import Lava.Mux
 main :: IO ()
 main
   = do writeSystemVerilog altNandGateTop
@@ -15,3 +16,4 @@ main
        writeSystemVerilog oneBitAdderTop
        writeSystemVerilog adder4Top
        writeSystemVerilog sub4Top
+       writeSystemVerilog muxN8Top

@@ -3,7 +3,7 @@ VERILATOR ?= verilator
 
 .PHONY: build doc sdist test
 
-all:	test nandgate_sim onebitadd_sim onebitadd_sim adder4-sim adder4-eqy sub4-sim sub4-eqy
+all:	test nandgate_sim onebitadd_sim onebitadd_sim adder4-sim adder4-eqy sub4-sim sub4-eqy muxN8-eqy
 
 doc:
 	cabal haddock
@@ -47,6 +47,9 @@ adder4-impl:
 
 nandgate-impl:
 	vivado -mode batch -source nandgate.tcl
+
+muxN8-eqy:
+	eqy -f muxN8.eqy
 
 # Generate a GitHub CI workflow config file using haskell-ci.
 workflow:

@@ -89,6 +89,7 @@ instantiateComponent ic component
       XorcyPrim cin part_sum o -> ["  XORCY xorcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "LI", "O"] [cin, part_sum, o] ++ "; "]
       MuxcyPrim s ci di o -> ["  MUXCY muxcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "DI", "S", "O"] [ci, di, s, o] ++ ";  "]
       Lut2Prim config i0 i1 o -> ["  LUT2 #(.INIT(4'h" ++ intToHex config ++ ")) lut2_" ++ show ic ++ showNamedArgs ["I0", "I1", "O"] [i0, i1, o] ++ ";  "]
+      Lut3Prim config i0 i1 i2 o -> ["  LUT3 #(.INIT(8'h" ++ intToHex config ++ ")) lut3_" ++ show ic ++ showNamedArgs ["I0", "I1", "I2", "O"] [i0, i1,i2,  o] ++ ";  "]
       Carry4Prim ci cyinit di s o co -> ["  CARRY4 carry4_" ++ show ic ++ " (" ++
                                          ".CI(" ++ showNet ci ++ "), " ++
                                          ".CYINIT(" ++ showNet cyinit ++ "), " ++

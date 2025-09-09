@@ -72,6 +72,7 @@ data PrimitiveInstance
    | XorcyPrim (Net Bit) (Net Bit) (Net Bit) -- ci li o
    | MuxcyPrim (Net Bit) (Net Bit) (Net Bit) (Net Bit) -- ci di s o
    | Lut2Prim Int (Net Bit) (Net Bit) (Net Bit)
+   | Lut3Prim Int (Net Bit) (Net Bit) (Net Bit) (Net Bit)
    | Carry4Prim (Net Bit) (Net Bit) (Array '[4] (Net Bit)) (Array '[4] (Net Bit)) (Array '[4] (Net Bit)) (Array '[4] (Net Bit)) -- ci cyinit di s o co
 
 data PortDirection = InputPort | OutputPort
@@ -119,6 +120,8 @@ instance Hardware RTL (Net Bit) where
   muxcy (s, (ci, di)) = input3Primitive MuxcyPrim (s, ci, di)
   lut2 :: (Bool -> Bool -> Bool) -> (Net Bit, Net Bit) -> RTL (Net Bit)
   lut2 = lut2RTL
+  lut3 :: (Bool -> Bool -> Bool -> Bool) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
+  lut3 = lut3RTL
   carry4 :: Net Bit -> Net Bit -> Array '[4] (Net Bit) -> Array '[4] (Net Bit) -> RTL (Array '[4] (Net Bit), Array '[4] (Net Bit))
   carry4 = carry4RTL
 
@@ -181,6 +184,15 @@ lut2RTL f (i0, i1)
     where
     progBits = [f b a | a <- [False, True], b <- [False, True]]
 
+
+lut3RTL :: (Bool -> Bool -> Bool -> Bool) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
+lut3RTL f (i0, i1, i2)
+  = do o <- mkNet BitType
+       mkNode (PrimitiveInstanceStatement (Lut3Prim (boolVecToInt progBits) i0 i1 i2 o))
+       return o
+    where
+    progBits = [f c b a | a <- [False, True], b <- [False, True], c <- [False, True]]
+
 carry4RTL :: Net Bit -> Net Bit -> Array '[4] (Net Bit) -> Array '[4] (Net Bit) -> RTL (Array '[4] (Net Bit), Array '[4] (Net Bit))
 carry4RTL ci cyinit di s
   = do o <- mkVecNet BitType
@@ -217,9 +229,9 @@ input name typ
        put (graph {graphData = gD{ports = portList ++ [port]}})
        return (NamedNet name typ)
 
-inputVec :: forall n a . KnownNat n => String -> Int -> NetType (a::NetKind)  -> RTL (Array '[n] (Net a))
-inputVec name n typ
-  = do vecNet <- input name (VecType [n] typ)
+inputVec :: forall n a . KnownNat n => String -> NetType (a::NetKind) -> RTL (Array '[n] (Net a))
+inputVec name typ
+  = do vecNet <- input name (VecType [n'] typ)
        return (fromList [IndexedNet i vecNet (VecType [n'] typ) | i <- [0..n'-1]])
     where
     n' = fromIntegral (GHC.TypeNats.natVal (Proxy @n))

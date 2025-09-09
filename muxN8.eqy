@@ -1,0 +1,15 @@
+[options]
+
+[gold]
+read -verific
+read -sv muxN8_golden.sv
+prep -top muxN8
+
+[gate]
+read -vlog2k -DXIL_XECLIB unisims/LUT3.v
+read -sv muxN8.sv
+synth -top muxN8
+
+[strategy simple]
+use sat
+depth 10

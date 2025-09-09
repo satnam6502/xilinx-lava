@@ -57,6 +57,8 @@ instance Hardware Sim [Bool] where
   carry4 = carry4ArraySim
   lut2 :: (Bool -> Bool -> Bool) -> ([Bool], [Bool]) -> Sim [Bool]
   lut2 f (i0, i1) = return [f a b | (a, b) <- zip i0 i1]
+  lut3 :: (Bool -> Bool -> Bool -> Bool) -> ([Bool], [Bool], [Bool]) -> Sim [Bool]
+  lut3 f (i0, i1, i2) = return [f a b c | (a, b, c) <- zip3 i0 i1 i2]
 
 carry4ArraySim:: [Bool] -> [Bool] -> Array '[4] [Bool] -> Array '[4] [Bool] -> Sim (Array '[4] [Bool], Array '[4] [Bool])
 carry4ArraySim ci cyinit di s
