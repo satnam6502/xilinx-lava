@@ -59,8 +59,8 @@ module CARRY4
   wire [3:0] DI_in;
   wire [3:0] S_in;
 
-  assign CI_in = CI; // rv 0
-  assign CYINIT_in = CYINIT; // rv 0
+  assign CI_in = CI;         // rv 0
+  assign CYINIT_in = CYINIT; // rv 00
   assign DI_in = DI;
   assign S_in = S;
 

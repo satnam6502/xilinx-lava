@@ -34,3 +34,5 @@ xor2 = lut2 (/=)
 xor2b2 :: Hardware m bit => (bit, bit) -> m bit
 xor2b2 = lut2 (\a b -> a /= (not b))
 
+xnor2 :: Hardware m bit => (bit, bit) -> m bit
+xnor2 = lut2 (==)

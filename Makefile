@@ -33,6 +33,11 @@ adder4-sim:
 	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal --top-module adder4_tb adder4.sv adder4_tb.sv
 	obj_dir/Vadder4_tb +trace
 
+sub4-sim:
+	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal --top-module sub4_tb sub4.sv sub4_tb.sv
+	obj_dir/Vsub4_tb +trace
+
+
 adder4-impl:
 	vivado -mode batch -source adder4.tcl
 

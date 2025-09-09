@@ -5,12 +5,14 @@ module Lava.Sub4 where
 import Lava
 import Data.Array.Shaped
 
+-- If a >= b carryOut = 1, else carryOut = 0.
+-- sub4 computes a - b for two unsigned values a and b, with wrap-around arithmetic.
 sub4 :: Hardware m bit => Array '[4] bit -> Array '[4] bit -> m (Array '[4] bit, bit)
 sub4 a b
-  = do ps0 :: bit <- xor2b2 (aL!!0, bL!!0)
-       ps1 :: bit <- xor2b2 (aL!!1, bL!!1)
-       ps2 :: bit <- xor2b2 (aL!!2, bL!!2)
-       ps3 :: bit <- xor2b2 (aL!!3, bL!!3)
+  = do ps0 :: bit <- xnor2 (aL!!0, bL!!0)
+       ps1 :: bit <- xnor2 (aL!!1, bL!!1)
+       ps2 :: bit <- xnor2 (aL!!2, bL!!2)
+       ps3 :: bit <- xnor2 (aL!!3, bL!!3)
        b0 <- zero
        b1 <- one
        (sumOut, carryOut) <- carry4 b0 b1 a (fromList [ps0, ps1, ps2, ps3])
