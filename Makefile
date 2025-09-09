@@ -1,9 +1,12 @@
 VERSION=6.0.0.0
 VERILATOR ?= verilator
 
-.PHONY: build doc sdist test
+.PHONY: build doc sdist test all formal
 
-all:	test nandgate_sim onebitadd_sim onebitadd_sim adder4-sim adder4-eqy sub4-sim sub4-eqy muxN8-eqy
+all:	test nandgate_sim onebitadd_sim onebitadd_sim adder4-sim sub4-sim formal
+        
+
+formal:	adder4-eqy sub4-eqy muxN8-eqy twoSorter-eqy
 
 doc:
 	cabal haddock
@@ -38,6 +41,9 @@ sub4-sim:
 	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal --top-module sub4_tb sub4.sv sub4_tb.sv
 	obj_dir/Vsub4_tb +trace
 
+twoSorter-sim:
+	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal --top-module twoSorter_tb twoSorter_tb.sv
+	obj_dir/VtwoSorter_tb +trace
 
 sub4-eqy:
 	eqy -f sub4.eqy
@@ -50,6 +56,9 @@ nandgate-impl:
 
 muxN8-eqy:
 	eqy -f muxN8.eqy
+
+twoSorter-eqy:
+	eqy -f twoSorter.eqy
 
 # Generate a GitHub CI workflow config file using haskell-ci.
 workflow:

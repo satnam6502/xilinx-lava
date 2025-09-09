@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
-{-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
@@ -9,14 +7,13 @@
 
 module Lava.Mux where
 
-import Lava.Hardware
-import Lava.RTL
+import Lava
 import Data.Array.Shaped
 import GHC.TypeLits
 
 
 oneBitMux :: Hardware m bit => bit -> (bit, bit) -> m bit
-oneBitMux sel (a, b) = lut3 (\s x y -> ((not s) && x) || (s && y)) (sel, a, b)
+oneBitMux sel (a, b) = lut3 (\s x y -> (not s && x) || (s && y)) (sel, a, b)
 
 
 muxN :: (KnownNat n, Hardware m bit) => bit -> (Array '[n] bit, Array '[n] bit) -> m (Array '[n] bit)

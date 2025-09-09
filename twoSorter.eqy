@@ -1,0 +1,15 @@
+[options]
+
+[gold]
+read -verific
+read -sv twoSorter_golden.sv
+prep -top twoSorter
+
+[gate]
+read -vlog2k -DXIL_XECLIB unisims/LUT2.v unisims/LUT3.v unisims/CARRY4.v
+read -sv twoSorter.sv
+synth -top twoSorter
+
+[strategy simple]
+use sat
+depth 10

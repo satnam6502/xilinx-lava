@@ -69,6 +69,7 @@ library
                       Lava.Adder4
                       Lava.Sub4
                       Lava.Mux
+                      Lava.TwoSorter
 
     -- Modules included in this library but not exported.
     other-modules:    Lava.Combinators,
