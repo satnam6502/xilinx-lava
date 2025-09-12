@@ -5,7 +5,7 @@ VERILATOR ?= verilator
 
 all:	test tests formal
         
-tests: nandgate_sim onebitadd_sim adder4-sim sub4-sim twoSorter-sim
+tests: nandgate-sim onebitadd-sim adder4-sim sub4-sim twoSorter-sim sorter4-sim
 
 formal:	adder4-eqy sub4-eqy muxN8-eqy twoSorter-eqy
 
@@ -24,11 +24,11 @@ publish:	sdist
 test:
 	cabal test
 
-nandgate_sim:
-	$(VERILATOR) +1800-2017ext+sv verilator.vlt --timing --binary --trace -Wall -cc --build --clk clk --top-module nandgate_sim altNandGate.sv nandgate_sim.sv 
-	obj_dir/Vnandgate_sim +trace
+nandgate-sim:
+	$(VERILATOR) +1800-2017ext+sv verilator.vlt --timing --binary --trace -Wall -cc --build --clk clk --top-module nandgate-sim altNandGate.sv nandgate-sim.sv 
+	obj_dir/Vnandgate-sim +trace
 
-onebitadd_sim:
+onebitadd-sim:
 	$(VERILATOR) +1800-2017ext+sv verilator.vlt -y unisims --lint-only oneBitAdder.sv
 
 adder4-sim:
@@ -45,6 +45,11 @@ sub4-sim:
 twoSorter-sim:
 	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal --top-module twoSorter_tb twoSorter_tb.sv
 	obj_dir/VtwoSorter_tb +trace
+
+
+sorter4-sim:
+	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal --top-module sorter4_tb sorter4_tb.sv
+	obj_dir/Vsorter4_tb +trace
 
 sub4-eqy:
 	eqy -f sub4.eqy
