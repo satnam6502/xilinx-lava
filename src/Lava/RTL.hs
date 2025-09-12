@@ -232,7 +232,7 @@ input name typ
 inputVec :: forall n a . KnownNat n => String -> NetType (a::NetKind) -> RTL (Array '[n] (Net a))
 inputVec name typ
   = do vecNet <- input name (VecType [n'] typ)
-       return (fromList [IndexedNet i vecNet (VecType [n'] typ) | i <- [0..n'-1]])
+       return (smash vecNet)
     where
     n' = fromIntegral (GHC.TypeNats.natVal (Proxy @n))
 
@@ -264,3 +264,15 @@ setModuleName name
          error ("Module name already defined as: " ++ moduleName gD)
        put (graph{graphData=gD{moduleName = name}})
 
+smash :: forall n k . KnownNat n => Net (VectorKind '[n] k) -> Array '[n] (Net k)
+smash a = fromList [IndexedNet i a (typeOfNet a) | i <- [0..n'-1]]
+          where
+          n' = fromIntegral (GHC.TypeNats.natVal (Proxy @n))
+
+unsmash :: forall n k . KnownNat n => Array '[n] (Net k) -> Net (VectorKind '[n] k) 
+unsmash a = VecLiteral a (VecType [n'] (typeOfNet (unScalar (a `index` 0))))
+            where
+            n' = fromIntegral (GHC.TypeNats.natVal (Proxy @n))
+
+unsmashA :: forall n m a . (KnownNat n, KnownNat m) => Array '[n] (Array '[m] (Net a)) -> Array '[n] (Net (VectorKind '[m] a)) 
+unsmashA = mapA unsmash

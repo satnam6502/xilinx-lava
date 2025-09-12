@@ -37,38 +37,38 @@ loop circuit a
   = mdo (c, feedback) <- circuit (a, feedback)
         return c
 
-par :: (KnownNat n, Monad m) => (a -> m b) -> Array '[n] a -> m (Array '[n] b)
+par :: (KnownNat n, Applicative m) => (a -> m b) -> Array '[n] a -> m (Array '[n] b)
 par f a = traverseA id (mapA f a)
 
-halve :: forall a n. (KnownNat n, KnownNat (2 * n)) => Array '[2 * n] a -> Array '[2] (Array '[n] a)
-halve = unravel . reshape @'[2, n]
+halve :: forall a n m. (KnownNat n, Applicative m) => Array '[2 * n] a -> m (Array '[2] (Array '[n] a))
+halve = pure . unravel . reshape @'[2, n]
 
-unhalve :: forall a n. KnownNat n => Array '[2] (Array '[n] a) -> Array '[2 * n] a
-unhalve = reshape @'[2 * n] . ravel
+unhalve :: forall a n m. (KnownNat n, Applicative m) => Array '[2] (Array '[n] a) -> m (Array '[2 * n] a)
+unhalve = pure . reshape @'[2 * n] . ravel
 
-pair :: forall a n. KnownNat n => Array '[2 * n] a -> Array '[n] (Array '[2] a)
-pair = unravel . reshape @'[n, 2]
+pair :: forall a n m. (KnownNat n, Applicative m) => Array '[2 * n] a -> m (Array '[n] (Array '[2] a))
+pair = pure . unravel . reshape @'[n, 2]
 
-unpair :: forall a n. KnownNat n => Array '[n] (Array '[2] a) -> Array '[2 * n] a
-unpair = reshape @'[2 * n] . ravel
+unpair :: forall a n m. (KnownNat n, Applicative m) => Array '[n] (Array '[2] a) -> m (Array '[2 * n] a)
+unpair = pure . reshape @'[2 * n] . ravel
 
-zipA :: forall a n. KnownNat n => Array '[2] (Array '[n] a) -> Array '[n] (Array '[2] a)
-zipA =  unravel . transpose @[1, 0] . ravel
+zipA :: (KnownNat n, Applicative m) => Array '[2] (Array '[n] a) -> m (Array '[n] (Array '[2] a))
+zipA =  pure . unravel . transpose @[1, 0] . ravel
 
-unzipA :: KnownNat n => Array '[n] (Array '[2] a) -> Array '[2] (Array '[n] a)
-unzipA =  unravel . transpose @[1, 0] . ravel
+unzipA :: (KnownNat n, Applicative m) => Array '[n] (Array '[2] a) -> m (Array '[2] (Array '[n] a))
+unzipA =  pure . unravel . transpose @[1, 0] . ravel
 
-riffle :: KnownNat n => Array '[2 * n] a -> Array '[2 * n] a
-riffle = unpair . zipA . halve
+riffle :: (KnownNat n, Monad m) => Array '[2 * n] a -> m (Array '[2 * n] a)
+riffle = halve >=> zipA >=> unpair 
 
-unriffle :: KnownNat n => Array '[2 * n] a -> Array '[2 * n] a
-unriffle = unhalve . unzipA . pair
+unriffle :: (KnownNat n, Monad m) => Array '[2 * n] a -> m (Array '[2 * n] a)
+unriffle = pair >=> unzipA >=> unhalve
 
-two :: KnownNat n => (Array '[n] a ->  Array '[n] a) -> Array '[2 * n] a -> Array '[2 * n] a
-two f = unhalve . fmap f . halve
+two :: (KnownNat n, Monad m) => (Array '[n] a ->  m (Array '[n] a)) -> Array '[2 * n] a -> m (Array '[2 * n] a)
+two f = halve >=> par f >=> unhalve
 
-evens :: KnownNat n => (Array '[2] a -> Array '[2] a) -> Array '[n * 2] a -> Array '[n * 2] a
-evens f =  unpair . fmap f . pair
+evens ::(KnownNat n, Monad m) => (Array '[2] a -> m (Array '[2] a)) -> Array '[n * 2] a -> m (Array '[n * 2] a)
+evens f = pair >=> par f >=> unpair
 
-ilv :: KnownNat n => (Array '[n] a -> Array '[n] a) -> Array '[n * 2] a -> Array '[n * 2] a
-ilv r = riffle . two r . unriffle
+ilv :: (KnownNat n, Monad m) => (Array '[n] a -> m (Array '[n] a)) -> Array '[n * 2] a -> m (Array '[n * 2] a)
+ilv r = unriffle >=> two r >=> riffle

@@ -8,6 +8,8 @@ import Lava.Adder4
 import Lava.Sub4
 import Lava.Mux
 import Lava.TwoSorter
+import Lava.Sorter
+
 main :: IO ()
 main
   = do writeSystemVerilog altNandGateTop
@@ -19,3 +21,4 @@ main
        writeSystemVerilog sub4Top
        writeSystemVerilog muxN8Top
        writeSystemVerilog twoSorterTop
+       writeSystemVerilog sorter4Top
