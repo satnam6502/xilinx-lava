@@ -46,14 +46,6 @@ instance Bfly One where
 instance (KnownNat (ToExpNat n), Bfly n) => Bfly (Succ n) where
   bfly r = ilv (bfly @n r) >=> evens r
 
-twoSorterA :: Hardware m bit =>  Array '[2] (Array '[4] bit) -> m (Array '[2] (Array '[4] bit))
-twoSorterA a
-  = do (p, q) <- twoSorter (x, y)
-       return (fromList [p, q])
-    where
-    x = unScalar (index a 0)
-    y = unScalar (index a 1)
-
 class BatchersSorter (n :: N) where
   batchersSorter :: Hardware m bit => Array '[ToExpNat n] (Array '[4] bit) -> m (Array '[ToExpNat n] (Array '[4] bit) )
 

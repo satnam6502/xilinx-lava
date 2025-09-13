@@ -27,6 +27,7 @@ class Monad m => Hardware m bit where
   lut2 :: (Bool -> Bool -> Bool) -> (bit, bit) -> m bit
   lut3 :: (Bool -> Bool -> Bool -> Bool) -> (bit, bit, bit) -> m bit
   carry4 :: bit -> bit -> Array '[4] bit -> Array '[4] bit -> m (Array '[4] bit, Array '[4] bit) -- ci -> cyinit -> (di, s) -> (o, co)
+  reg :: bit -> m bit
 
 xor2 :: Hardware m bit => (bit, bit) -> m bit
 xor2 = lut2 (/=)

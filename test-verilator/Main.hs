@@ -21,4 +21,5 @@ main
        writeSystemVerilog sub4Top
        writeSystemVerilog muxN8Top
        writeSystemVerilog twoSorterTop
+       writeSystemVerilog twoSorterRegTop
        writeSystemVerilog sorter4Top

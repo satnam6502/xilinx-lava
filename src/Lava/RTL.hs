@@ -74,6 +74,8 @@ data PrimitiveInstance
    | Lut2Prim Int (Net Bit) (Net Bit) (Net Bit)
    | Lut3Prim Int (Net Bit) (Net Bit) (Net Bit) (Net Bit)
    | Carry4Prim (Net Bit) (Net Bit) (Array '[4] (Net Bit)) (Array '[4] (Net Bit)) (Array '[4] (Net Bit)) (Array '[4] (Net Bit)) -- ci cyinit di s o co
+   | FDCEPrim (Net Bit) (Net Bit) (Net Bit) (Net Bit) (Net Bit)
+   | BufGPrim (Net Bit) (Net Bit) 
 
 data PortDirection = InputPort | OutputPort
                      deriving (Eq, Show)
@@ -87,9 +89,12 @@ data LocalDec = forall (a::NetKind) . LocalDec Int (NetType a)
 -- and how how many nets have been declared.
 data Netlist = Netlist {
   moduleName :: String,    -- `moduleName` is the name to be used for the generated SystemVerilog module.
-  clockName :: String,     -- `clockName` is the name of the clock net.
+  clockName :: String,     -- `clockName` is the name of the clock net, default clk.
+  clockNet :: Net Bit,     -- `clockNet` is the output of the BUFG that drivers the internal clock net.
   clockUsed :: Bool,       -- `clockUsed` is true if the circuit to be generated is sequential (contains registers) so it needs a clock input.
-  ports :: [PortSpec],     -- `ports` is a list of the input and output port definitions for the cirucit.
+  resetName :: String,     -- `resetName` is the name of the reset net, defualt "rst".
+  resetNet :: Net Bit,     -- `resetNet` is the global reset net, which may be an inverted version of the reset input.
+  ports :: [PortSpec],     -- `ports` is a list of the input and output port definitions for the circuit.
   localDecs :: [LocalDec]  -- `localDecs` is a list of local signal declarations.
   }
 
@@ -124,6 +129,8 @@ instance Hardware RTL (Net Bit) where
   lut3 = lut3RTL
   carry4 :: Net Bit -> Net Bit -> Array '[4] (Net Bit) -> Array '[4] (Net Bit) -> RTL (Array '[4] (Net Bit), Array '[4] (Net Bit))
   carry4 = carry4RTL
+  reg :: Net Bit -> RTL (Net Bit)
+  reg = regRTL
 
 addLocalDec :: Int -> NetType a -> RTL ()
 addLocalDec n typ
@@ -184,7 +191,6 @@ lut2RTL f (i0, i1)
     where
     progBits = [f b a | a <- [False, True], b <- [False, True]]
 
-
 lut3RTL :: (Bool -> Bool -> Bool -> Bool) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
 lut3RTL f (i0, i1, i2)
   = do o <- mkNet BitType
@@ -200,11 +206,23 @@ carry4RTL ci cyinit di s
        mkNode (PrimitiveInstanceStatement (Carry4Prim ci cyinit di s o co))
        return (o, co)
 
+bufG :: Net Bit -> RTL (Net Bit)
+bufG i
+  = do o <- mkNet BitType
+       mkNode (PrimitiveInstanceStatement (BufGPrim i o))
+       return o
+
+setClockNet :: String -> RTL ()
+setClockNet name
+  = do graph <- get
+       let gD = graphData graph
+       put (graph{graphData = gD{clockName = name, clockNet = (NamedNet name BitType)}})
+
 getClockNet :: RTL (Net Bit)
 getClockNet
   = do graph <- get
        let gD = graphData graph
-       return (NamedNet (clockName gD) BitType)
+       return (clockNet gD)
 
 setClockUsed :: RTL ()
 setClockUsed
@@ -212,12 +230,42 @@ setClockUsed
        let gD = graphData graph
        put (graph{graphData = gD{clockUsed = True}})
 
+
+setResetNet :: String -> RTL ()
+setResetNet name
+  = do graph <- get
+       let gD = graphData graph
+       put (graph{graphData = gD{resetName = name, resetNet = NamedNet name BitType}})
+
+setActiveLowResetNet :: String -> RTL ()
+setActiveLowResetNet name
+  = do let resetInput = NamedNet name BitType
+       invReset <- invRTL resetInput
+       graph <- get
+       let gD = graphData graph
+       put (graph{graphData = gD{resetName = name, resetNet = invReset}})
+
+getResetNet :: RTL (Net Bit)
+getResetNet
+  = do graph <- get
+       let gD = graphData graph
+       return (resetNet gD)
+
 delayRTL :: Net (a::NetKind) -> RTL (Net (a::NetKind))
 delayRTL i
   = do o <- mkNet (typeOfNet i)
        clk <- getClockNet
        setClockUsed
        mkNode (Delay clk i o)
+       return o
+
+regRTL :: Net Bit-> RTL (Net Bit)
+regRTL i
+  = do o <- mkNet (typeOfNet i)
+       clk <- getClockNet
+       rst <- getResetNet
+       setClockUsed
+       mkNode (PrimitiveInstanceStatement (FDCEPrim i clk One rst o))
        return o
 
 input :: String -> NetType (a::NetKind) -> RTL (Net a)

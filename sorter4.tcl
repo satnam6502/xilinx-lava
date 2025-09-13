@@ -1,7 +1,7 @@
 set project_name "sorter4"
 set top_module "sorter4"
 set source_file "sorter4.sv"
-set part "xc7k70tfbv676-1"
+set part "xc7a200tsbg484-1"
 set build_dir $project_name
 set reports_dir "$build_dir/reports"
 set checkpoints_dir "$build_dir/checkpoints"

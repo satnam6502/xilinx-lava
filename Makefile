@@ -7,7 +7,7 @@ all:	test tests formal
         
 tests: nandgate-sim onebitadd-sim adder4-sim sub4-sim twoSorter-sim sorter4-sim
 
-formal:	adder4-eqy sub4-eqy muxN8-eqy twoSorter-eqy
+formal:	adder4-eqy sub4-eqy muxN8-eqy twoSorter-eqy twoSorterReg-eqy
 
 doc:
 	cabal haddock
@@ -43,9 +43,12 @@ sub4-sim:
 	obj_dir/Vsub4_tb +trace
 
 twoSorter-sim:
-	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal --top-module twoSorter_tb twoSorter_tb.sv
+	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --trace --binary -Wall -Wno-fatal --top-module twoSorter_tb twoSorter_tb.sv
 	obj_dir/VtwoSorter_tb +trace
 
+twoSorterReg-sim:
+	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --trace --binary -Wall -Wno-fatal --top-module twoSorterReg_tb twoSorterReg_tb.sv
+	obj_dir/VtwoSorterReg_tb +trace
 
 sorter4-sim:
 	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal --top-module sorter4_tb sorter4_tb.sv
@@ -66,9 +69,14 @@ muxN8-eqy:
 twoSorter-eqy:
 	eqy -f twoSorter.eqy
 
+twoSorterReg-eqy:
+	eqy -f twoSorterReg.eqy
+
 pc:
 	cp *.sv /Volumes/ardberg/home/satnam/xilinx-lava
+	cp *.v /Volumes/ardberg/home/satnam/xilinx-lava
 	cp *.tcl /Volumes/ardberg/home/satnam/xilinx-lava
+	cp *.xdc /Volumes/ardberg/home/satnam/xilinx-lava
 
 # Generate a GitHub CI workflow config file using haskell-ci.
 workflow:

@@ -15,12 +15,13 @@
 
 module Lava.Combinators (module Control.Monad,
        fork, loop, par, halve, unhalve, pair, unpair, zipA, unzipA,
-       riffle, unriffle, two, evens, ilv)
+       riffle, unriffle, two, evens, ilv, vreg)
 where
 import Control.Monad.Fix (MonadFix)
 import Control.Monad ((>=>)) 
 import Data.Array.Shaped
 import GHC.TypeLits
+import Lava.Hardware
 
 -- | Fork captures sharing. The input wire `a` is split
 --   into two wires, each containing the value of `a`.
@@ -72,3 +73,6 @@ evens f = pair >=> par f >=> unpair
 
 ilv :: (KnownNat n, Monad m) => (Array '[n] a -> m (Array '[n] a)) -> Array '[n * 2] a -> m (Array '[n * 2] a)
 ilv r = unriffle >=> two r >=> riffle
+
+vreg :: (Hardware m bit, KnownNat n) => Array '[n] bit -> m (Array '[n] bit)
+vreg = par reg

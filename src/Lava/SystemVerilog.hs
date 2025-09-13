@@ -21,7 +21,7 @@ writeSystemVerilog topModule
                  error "No module name set"
                else
                  moduleName nl
-    graph = computeGraph (Netlist fileName "clk" False [] []) topModule
+    graph = computeGraph (Netlist fileName "clk" Zero False "rst" (NamedNet "rst" BitType) [] []) topModule
     nl = graphData graph
 
 systemVerilogText :: String -> RTL () -> [String]
@@ -34,12 +34,16 @@ systemVerilogText fileName topModule
     concatMap emitStatement components ++
     ["endmodule: " ++ name]
     where
-    graph = computeGraph (Netlist name "clk" False [] []) topModule
+    graph = computeGraph (Netlist name "clk" Zero False "rst" (NamedNet "rst" BitType) [] []) topModule
     gD = graphData graph
     components = nodes graph
-    portList = ports gD
+    portList = clkRstPorts ++ ports gD
     name = if moduleName gD == "" then fileName
            else moduleName gD
+    clkRstPorts = if clockUsed gD then
+                    [PortSpec InputPort (clockName gD) BitType, PortSpec InputPort (resetName gD) BitType]
+                  else
+                    []
 
 declarePorts :: [PortSpec] -> [String]
 declarePorts [] = []
@@ -85,11 +89,11 @@ instantiateComponent ic component
       NorPrim inputs o  -> ["  nor nor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
       XorPrim inputs o  -> ["  xor xor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
       XnorPrim inputs o  -> [" xnor xnor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
-      Xor2Prim cin part_sum o -> ["  XOR2 xor2_" ++ show ic ++ " " ++ showNamedArgs ["I0", "I1", "O"] [cin, part_sum, o] ++ "; "]
-      XorcyPrim cin part_sum o -> ["  XORCY xorcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "LI", "O"] [cin, part_sum, o] ++ "; "]
-      MuxcyPrim s ci di o -> ["  MUXCY muxcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "DI", "S", "O"] [ci, di, s, o] ++ ";  "]
-      Lut2Prim config i0 i1 o -> ["  LUT2 #(.INIT(4'h" ++ intToHex config ++ ")) lut2_" ++ show ic ++ showNamedArgs ["I0", "I1", "O"] [i0, i1, o] ++ ";  "]
-      Lut3Prim config i0 i1 i2 o -> ["  LUT3 #(.INIT(8'h" ++ intToHex config ++ ")) lut3_" ++ show ic ++ showNamedArgs ["I0", "I1", "I2", "O"] [i0, i1,i2,  o] ++ ";  "]
+      Xor2Prim cin part_sum o -> ["  XOR2 xor2_" ++ show ic ++ " " ++ showNamedArgs ["I0", "I1", "O"] [cin, part_sum, o] ++ ";"]
+      XorcyPrim cin part_sum o -> ["  XORCY xorcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "LI", "O"] [cin, part_sum, o] ++ ";"]
+      MuxcyPrim s ci di o -> ["  MUXCY muxcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "DI", "S", "O"] [ci, di, s, o] ++ ";"]
+      Lut2Prim config i0 i1 o -> ["  LUT2 #(.INIT(4'h" ++ intToHex config ++ ")) lut2_" ++ show ic ++ showNamedArgs ["I0", "I1", "O"] [i0, i1, o] ++ ";"]
+      Lut3Prim config i0 i1 i2 o -> ["  LUT3 #(.INIT(8'h" ++ intToHex config ++ ")) lut3_" ++ show ic ++ showNamedArgs ["I0", "I1", "I2", "O"] [i0, i1,i2,  o] ++ ";"]
       Carry4Prim ci cyinit di s o co -> ["  CARRY4 carry4_" ++ show ic ++ " (" ++
                                          ".CI(" ++ showNet ci ++ "), " ++
                                          ".CYINIT(" ++ showNet cyinit ++ "), " ++
@@ -97,6 +101,8 @@ instantiateComponent ic component
                                          ".S(" ++ showArrayNet s ++ ")," ++
                                          ".O(" ++ showArrayNet o ++ ")," ++
                                          ".CO(" ++ showArrayNet co ++ "));"]
+      FDCEPrim d c ce clr o -> ["  FDCE  fdce_" ++ show ic ++ " " ++ showNamedArgs ["D", "C", "CE", "CLR", "Q"] [d, c, ce, clr, o] ++ ";"]
+      BufGPrim i o -> ["  BUFG bufg_" ++ show ic ++ " " ++ showNamedArgs ["I", "O"] [i, o] ++ ";"]               
 
 showNet :: Net a -> String
 showNet signal
@@ -200,12 +206,11 @@ systemVerilogSimulationText nl simVals
     outPorts = declarePorts outputPorts
     outputPorts = [p | p@(PortSpec OutputPort _ _) <- ports nl]
 
-
 writeSystemVerilogSimulation :: RTL () -> [[SimVal a]] -> IO ()
 writeSystemVerilogSimulation topModule simVals
   = writeFile simFilename (unlines (systemVerilogSimulationText nl simVals))
     where
-    graph = computeGraph (Netlist fileName "clk" False [] []) topModule
+    graph = computeGraph (Netlist fileName "clk" Zero False "rst" (NamedNet "rst" BitType) [] []) topModule
     nl = graphData graph
     fileName = moduleName nl
     simFilename = fileName ++ "_sim.sv"

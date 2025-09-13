@@ -1,6 +1,6 @@
-set project_name "twoSorter"
-set top_module "twoSorter"
-set source_file "twoSorter.sv"
+set project_name "twoSorterReg_golden"
+set top_module "twoSorterReg"
+set source_file "twoSorterReg_golden.sv"
 set part "xc7a200tsbg484-1"
 set build_dir $project_name
 set reports_dir "$build_dir/reports"
@@ -14,7 +14,11 @@ file mkdir $checkpoints_dir
 create_project -in_memory -part $part
 
 read_verilog $source_file
+add_files -fileset constrs_1 -norecurse "twoSorterReg.xdc"
+
 synth_design -top $top_module -part $part
+opt_design
 place_design
 route_design
+phys_opt_design
 write_checkpoint -force $impl_checkpoint

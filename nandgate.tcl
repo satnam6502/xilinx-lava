@@ -1,7 +1,7 @@
 set project_name "nandgate"
 set top_module "nandgate"
 set source_file "nandgate.sv"
-set part "xc7k70tfbv676-1"
+set part "xc7a200tsbg484-1"
 set build_dir "build"
 set reports_dir "build/reports"
 set checkpoints_dir "build/checkpoints"
