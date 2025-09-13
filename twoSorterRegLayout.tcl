@@ -1,6 +1,6 @@
-set project_name "twoSorterReg"
-set top_module "twoSorterReg"
-set source_file "twoSorterReg.sv"
+set project_name "twoSorterRegLayout"
+set top_module "twoSorterRegLayout"
+set source_file "twoSorterRegLayout.sv"
 set part "xc7a200tsbg484-1"
 set build_dir $project_name
 set reports_dir "$build_dir/reports"
