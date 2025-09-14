@@ -72,6 +72,7 @@ showVecIndexType idxs = concat ["[" ++ show (hi-1) ++ ":0]" | hi <- idxs]
 
 emitStatement :: (Int, Statement) -> [String]
 emitStatement (n, PrimitiveInstanceStatement inst) = instantiateComponent n inst
+emitStatement (n, UNISIM inst) = instantiateUNISIM n inst
 emitStatement (_, LocalNetDeclaration n typ) = ["  " ++ showType typ ++ " net" ++ show n ++ ";"]
 emitStatement (_, Delay clk lhs rhs) = ["  always_ff @(posedge " ++ showNet clk ++ ") " ++ showNet lhs ++ " <= " ++ showNet rhs ++ ";"]
 emitStatement (_, Assignment lhs rhs) = ["  assign " ++ showNet lhs ++ " = " ++ showNet rhs ++ ";"]
@@ -90,6 +91,10 @@ instantiateComponent ic component
       XorPrim inputs o  -> ["  xor xor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
       XnorPrim inputs o  -> [" xnor xnor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
       Xor2Prim cin part_sum o -> ["  XOR2 xor2_" ++ show ic ++ " " ++ showNamedArgs ["I0", "I1", "O"] [cin, part_sum, o] ++ ";"]
+     
+instantiateUNISIM :: Int -> UNISIMInstance -> [String]
+instantiateUNISIM ic component
+  = case component of
       XorcyPrim cin part_sum o -> ["  XORCY xorcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "LI", "O"] [cin, part_sum, o] ++ ";"]
       MuxcyPrim s ci di o -> ["  MUXCY muxcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "DI", "S", "O"] [ci, di, s, o] ++ ";"]
       Lut2Prim config i0 i1 o -> ["  LUT2 #(.INIT(4'h" ++ intToHex config ++ ")) lut2_" ++ show ic ++ showNamedArgs ["I0", "I1", "O"] [i0, i1, o] ++ ";"]

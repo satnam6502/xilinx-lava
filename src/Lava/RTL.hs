@@ -54,6 +54,7 @@ typeOfNet (VecLiteral _ typ) = typ
 
 data Statement
    = PrimitiveInstanceStatement PrimitiveInstance
+   | UNISIM UNISIMInstance
    | forall a . LocalNetDeclaration Int (NetType a)
    | forall a. Delay (Net Bit) (Net a) (Net a)
    | forall a. Assignment (Net a) (Net a)
@@ -69,7 +70,9 @@ data PrimitiveInstance
    | XorPrim  [Net Bit] (Net Bit)
    | XnorPrim [Net Bit] (Net Bit)
    | Xor2Prim (Net Bit) (Net Bit) (Net Bit)
-   | XorcyPrim (Net Bit) (Net Bit) (Net Bit) -- ci li o
+
+data UNISIMInstance
+  =  XorcyPrim (Net Bit) (Net Bit) (Net Bit) -- ci li o
    | MuxcyPrim (Net Bit) (Net Bit) (Net Bit) (Net Bit) -- ci di s o
    | Lut2Prim Int (Net Bit) (Net Bit) (Net Bit)
    | Lut3Prim Int (Net Bit) (Net Bit) (Net Bit) (Net Bit)
@@ -120,9 +123,9 @@ instance Hardware RTL (Net Bit) where
   delay :: Net Bit -> RTL (Net Bit)
   delay = delayRTL
   xorcy :: (Net Bit, Net Bit) -> RTL (Net Bit)
-  xorcy = binaryPrimitive' XorcyPrim
+  xorcy = binaryUnism' XorcyPrim
   muxcy :: (Net Bit, (Net Bit, Net Bit)) -> RTL (Net Bit)
-  muxcy (s, (ci, di)) = input3Primitive MuxcyPrim (s, ci, di)
+  muxcy (s, (ci, di)) = input3UNISM MuxcyPrim (s, ci, di)
   lut2 :: (Bool -> Bool -> Bool) -> (Net Bit, Net Bit) -> RTL (Net Bit)
   lut2 = lut2RTL
   lut3 :: (Bool -> Bool -> Bool -> Bool) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
@@ -172,10 +175,22 @@ binaryPrimitive' primitive (i0, i1)
        mkNode (PrimitiveInstanceStatement (primitive i0 i1 o))
        return o
 
+binaryUnism' :: (Net Bit -> Net Bit -> Net Bit -> UNISIMInstance) -> (Net Bit, Net Bit) -> RTL (Net Bit)
+binaryUnism' primitive (i0, i1)
+  = do o <- mkNet BitType
+       mkNode (UNISIM (primitive i0 i1 o))
+       return o
+
 input3Primitive :: (Net Bit -> Net Bit -> Net Bit -> Net Bit -> PrimitiveInstance) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
 input3Primitive primitive (i0, i1, i2)
   = do o <- mkNet BitType
        mkNode (PrimitiveInstanceStatement (primitive i0 i1 i2 o))
+       return o
+
+input3UNISM :: (Net Bit -> Net Bit -> Net Bit -> Net Bit -> UNISIMInstance) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
+input3UNISM primitive (i0, i1, i2)
+  = do o <- mkNet BitType
+       mkNode (UNISIM (primitive i0 i1 i2 o))
        return o
 
 boolVecToInt :: [Bool] -> Int
@@ -186,7 +201,7 @@ boolVecToInt (True:xs) =  1 + 2 * boolVecToInt xs
 lut2RTL :: (Bool -> Bool -> Bool) -> (Net Bit, Net Bit) -> RTL (Net Bit)
 lut2RTL f (i0, i1)
   = do o <- mkNet BitType
-       mkNode (PrimitiveInstanceStatement (Lut2Prim (boolVecToInt progBits) i0 i1 o))
+       mkNode (UNISIM (Lut2Prim (boolVecToInt progBits) i0 i1 o))
        return o
     where
     progBits = [f b a | a <- [False, True], b <- [False, True]]
@@ -194,7 +209,7 @@ lut2RTL f (i0, i1)
 lut3RTL :: (Bool -> Bool -> Bool -> Bool) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
 lut3RTL f (i0, i1, i2)
   = do o <- mkNet BitType
-       mkNode (PrimitiveInstanceStatement (Lut3Prim (boolVecToInt progBits) i0 i1 i2 o))
+       mkNode (UNISIM (Lut3Prim (boolVecToInt progBits) i0 i1 i2 o))
        return o
     where
     progBits = [f c b a | a <- [False, True], b <- [False, True], c <- [False, True]]
@@ -203,13 +218,13 @@ carry4RTL :: Net Bit -> Net Bit -> Array '[4] (Net Bit) -> Array '[4] (Net Bit) 
 carry4RTL ci cyinit di s
   = do o <- mkVecNet BitType
        co <- mkVecNet BitType
-       mkNode (PrimitiveInstanceStatement (Carry4Prim ci cyinit di s o co))
+       mkNode (UNISIM (Carry4Prim ci cyinit di s o co))
        return (o, co)
 
 bufG :: Net Bit -> RTL (Net Bit)
 bufG i
   = do o <- mkNet BitType
-       mkNode (PrimitiveInstanceStatement (BufGPrim i o))
+       mkNode (UNISIM (BufGPrim i o))
        return o
 
 setClockNet :: String -> RTL ()
@@ -265,7 +280,7 @@ regRTL i
        clk <- getClockNet
        rst <- getResetNet
        setClockUsed
-       mkNode (PrimitiveInstanceStatement (FDCEPrim i clk One rst o))
+       mkNode (UNISIM (FDCEPrim i clk One rst o))
        return o
 
 input :: String -> NetType (a::NetKind) -> RTL (Net a)
