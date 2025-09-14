@@ -37,10 +37,10 @@ module twoSorterRegLayout(
   logic net0;
   assign d = {net28,net27,net26,net25};
   assign c = {net24,net23,net22,net21};
-  (* RLOC = "X1Y1" *) FDCE  fdce_26 (.D(net20), .C(clk), .CE(1'b1), .CLR(net0), .Q(net28));
-  (* RLOC = "X1Y1" *) FDCE  fdce_25 (.D(net19), .C(clk), .CE(1'b1), .CLR(net0), .Q(net27));
-  (* RLOC = "X1Y1" *) FDCE  fdce_24 (.D(net18), .C(clk), .CE(1'b1), .CLR(net0), .Q(net26));
-  (* RLOC = "X1Y1" *) FDCE  fdce_23 (.D(net17), .C(clk), .CE(1'b1), .CLR(net0), .Q(net25));
+  (* RLOC = "X1Y0" *) FDCE  fdce_26 (.D(net20), .C(clk), .CE(1'b1), .CLR(net0), .Q(net28));
+  (* RLOC = "X1Y0" *) FDCE  fdce_25 (.D(net19), .C(clk), .CE(1'b1), .CLR(net0), .Q(net27));
+  (* RLOC = "X1Y0" *) FDCE  fdce_24 (.D(net18), .C(clk), .CE(1'b1), .CLR(net0), .Q(net26));
+  (* RLOC = "X1Y0" *) FDCE  fdce_23 (.D(net17), .C(clk), .CE(1'b1), .CLR(net0), .Q(net25));
   (* RLOC = "X1Y0" *) FDCE  fdce_22 (.D(net10), .C(clk), .CE(1'b1), .CLR(net0), .Q(net24));
   (* RLOC = "X1Y0" *) FDCE  fdce_21 (.D(net9), .C(clk), .CE(1'b1), .CLR(net0), .Q(net23));
   (* RLOC = "X1Y0" *) FDCE  fdce_20 (.D(net8), .C(clk), .CE(1'b1), .CLR(net0), .Q(net22));
