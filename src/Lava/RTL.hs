@@ -373,8 +373,14 @@ computeLayout nl
 
 applyLayout :: Layout (Int, Statement) -> [(Int, Statement)]
 applyLayout (Block b) = b
-applyLayout (Beside _ a b) = applyLayout a ++ applyLayout b
-applyLayout (Below _ a b) = applyLayout a ++ applyLayout b
+applyLayout (Beside _ a b)
+  = applyLayout a ++ applyLayout (translateBlock (dx, 0) b)
+    where
+    (dx, _) = blockSize a
+applyLayout (Below _ a b)
+  = applyLayout a ++ applyLayout (translateBlock (0, dy) b)
+    where
+    (_, dy) = blockSize a
 
 concatBlocks :: [Layout (Int, Statement)] -> [(Int, Statement)]
 concatBlocks [] = []
@@ -411,6 +417,18 @@ blockSize :: Layout (Int, Statement) -> (Int, Int)
 blockSize (Block _) = (1, 1)
 blockSize (Beside wh _ _) = wh
 blockSize (Below wh _ _) = wh
+
+translateBlock :: (Int, Int) -> Layout (Int, Statement) -> Layout (Int, Statement)
+translateBlock dxdy block
+  = case block of
+      Block b -> Block (map (translateInstance dxdy) b)
+      Beside wh a b -> Beside wh (translateBlock dxdy a) (translateBlock dxdy b)
+      Below wh a b -> Below wh (translateBlock dxdy a) (translateBlock dxdy b)
+
+translateInstance :: (Int, Int) -> (Int, Statement) -> (Int, Statement)
+translateInstance (dx, dy) (instNr, UNISIM Nothing inst) = (instNr, UNISIM (Just (RLOC dx dy)) inst)
+translateInstance (dx, dy) (instNr, UNISIM (Just (RLOC x y)) inst) = (instNr, UNISIM (Just (RLOC (x+dx) (y+dy))) inst)
+translateInstance _ other = other
 
 leftToRightSerialComposition :: (a -> RTL b) -> (b -> RTL c) -> a -> RTL c
 leftToRightSerialComposition a b x
