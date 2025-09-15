@@ -12,6 +12,8 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Lava.RTL
 where
@@ -22,7 +24,7 @@ import Control.Monad.State.Lazy (MonadState(put, get) )
 import Data.Array.Shaped
 import GHC.TypeLits
 import GHC.TypeNats
-import Data.Proxy 
+import Data.Proxy
 
 data NetKind
   = Bit
@@ -44,6 +46,8 @@ data Net (a::NetKind) where
    IndexedNet :: Int -> Net (VectorKind n a) -> NetType (VectorKind n a) -> Net a
    VecLiteral :: forall (n :: Nat) a . KnownNat n => Array '[n] (Net a) -> NetType (VectorKind '[n] a) -> Net (VectorKind '[n] a)
 
+deriving instance (Show (NetType a)) => Show (Net a)
+
 typeOfNet :: Net a -> NetType a
 typeOfNet Zero = BitType
 typeOfNet One = BitType
@@ -59,6 +63,8 @@ data Statement
    | forall a. Delay (Net Bit) (Net a) (Net a)
    | forall a. Assignment (Net a) (Net a)
 
+deriving instance (Show Statement)
+
 -- SystemVerilog primitive gates, many of which take a variable
 -- number of inputs.
 data PrimitiveInstance
@@ -70,15 +76,18 @@ data PrimitiveInstance
    | XorPrim  [Net Bit] (Net Bit)
    | XnorPrim [Net Bit] (Net Bit)
    | Xor2Prim (Net Bit) (Net Bit) (Net Bit)
+   deriving Show
 
 data UNISIMInstance
   =  XorcyPrim (Net Bit) (Net Bit) (Net Bit) -- ci li o
    | MuxcyPrim (Net Bit) (Net Bit) (Net Bit) (Net Bit) -- ci di s o
+   | Lut1Prim Int (Net Bit) (Net Bit)
    | Lut2Prim Int (Net Bit) (Net Bit) (Net Bit)
    | Lut3Prim Int (Net Bit) (Net Bit) (Net Bit) (Net Bit)
    | Carry4Prim (Net Bit) (Net Bit) (Array '[4] (Net Bit)) (Array '[4] (Net Bit)) (Array '[4] (Net Bit)) (Array '[4] (Net Bit)) -- ci cyinit di s o co
    | FDCEPrim (Net Bit) (Net Bit) (Net Bit) (Net Bit) (Net Bit)
-   | BufGPrim (Net Bit) (Net Bit) 
+   | BufGPrim (Net Bit) (Net Bit)
+   deriving Show
 
 data PortDirection = InputPort | OutputPort
                      deriving (Eq, Show)
@@ -126,6 +135,8 @@ instance Hardware RTL (Net Bit) where
   xorcy = binaryUnism' XorcyPrim
   muxcy :: (Net Bit, (Net Bit, Net Bit)) -> RTL (Net Bit)
   muxcy (s, (ci, di)) = input3UNISM MuxcyPrim (s, ci, di)
+  lut1 :: (Bool -> Bool) -> Net Bit -> RTL (Net Bit)
+  lut1 = lut1RTL
   lut2 :: (Bool -> Bool -> Bool) -> (Net Bit, Net Bit) -> RTL (Net Bit)
   lut2 = lut2RTL
   lut3 :: (Bool -> Bool -> Bool -> Bool) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
@@ -134,6 +145,8 @@ instance Hardware RTL (Net Bit) where
   carry4 = carry4RTL
   reg :: Net Bit -> RTL (Net Bit)
   reg = regRTL
+  (>->) :: (a -> RTL b) -> (b -> RTL c) -> a -> RTL c
+  (>->) = leftToRightSerialComposition
 
 addLocalDec :: Int -> NetType a -> RTL ()
 addLocalDec n typ
@@ -145,7 +158,7 @@ addLocalDec n typ
 mkNet :: NetType a -> RTL (Net a)
 mkNet t
  = do e <- mkNewEdgeNumber
-      addLocalDec e t 
+      addLocalDec e t
       return (LocalNet e t)
 
 mkVecNet :: forall n a . KnownNat n => NetType a -> RTL (Array '[n] (Net a))
@@ -197,6 +210,14 @@ boolVecToInt :: [Bool] -> Int
 boolVecToInt [] = 0
 boolVecToInt (False:xs) = 2 * boolVecToInt xs
 boolVecToInt (True:xs) =  1 + 2 * boolVecToInt xs
+
+lut1RTL :: (Bool -> Bool) -> Net Bit -> RTL (Net Bit)
+lut1RTL f i
+  = do o <- mkNet BitType
+       mkNode (UNISIM (Lut1Prim (boolVecToInt progBits) i o))
+       return o
+    where
+    progBits = [f a | a <- [False, True]]
 
 lut2RTL :: (Bool -> Bool -> Bool) -> (Net Bit, Net Bit) -> RTL (Net Bit)
 lut2RTL f (i0, i1)
@@ -332,10 +353,39 @@ smash a = fromList [IndexedNet i a (typeOfNet a) | i <- [0..n'-1]]
           where
           n' = fromIntegral (GHC.TypeNats.natVal (Proxy @n))
 
-unsmash :: forall n k . KnownNat n => Array '[n] (Net k) -> Net (VectorKind '[n] k) 
+unsmash :: forall n k . KnownNat n => Array '[n] (Net k) -> Net (VectorKind '[n] k)
 unsmash a = VecLiteral a (VecType [n'] (typeOfNet (unScalar (a `index` 0))))
             where
             n' = fromIntegral (GHC.TypeNats.natVal (Proxy @n))
 
-unsmashA :: forall n m a . (KnownNat n, KnownNat m) => Array '[n] (Array '[m] (Net a)) -> Array '[n] (Net (VectorKind '[m] a)) 
+unsmashA :: forall n m a . (KnownNat n, KnownNat m) => Array '[n] (Array '[m] (Net a)) -> Array '[n] (Net (VectorKind '[m] a))
 unsmashA = mapA unsmash
+
+computeLayout :: [Layout (Int, Statement)] -> [(Int, Statement)]
+computeLayout nl
+  = concatBlocks nl2
+    where
+    nl2 = computeLayout' nl -- Compute beside and below
+
+concatBlocks :: [Layout (Int, Statement)] -> [(Int, Statement)]
+concatBlocks [] = []
+concatBlocks ((Block b):nl) = b ++ concatBlocks nl
+concatBlocks other = error ("concatBlocks: expected Block at head instance: " ++ show other)
+
+computeLayout' :: [Layout (Int, Statement)] -> [Layout (Int, Statement)]
+computeLayout' [] = []
+computeLayout' ((Block b):nl) = Block b : computeLayout' nl
+computeLayout' ((Beside a b):nl) = computeLayout' [a, b] ++ computeLayout' nl
+computeLayout' ((Below a b):nl)  = computeLayout' [a, b] ++ computeLayout' nl
+
+leftToRightSerialComposition :: (a -> RTL b) -> (b -> RTL c) -> a -> RTL c
+leftToRightSerialComposition a b x
+  = do pushGraph
+       y <- a x
+       aBlock <- popGraph
+       pushGraph
+       r <- b y
+       bBlock <- popGraph
+       addLayoutBlock (Beside aBlock bBlock)
+       return r
+

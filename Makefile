@@ -25,8 +25,8 @@ test:
 	cabal test
 
 nandgate-sim:
-	$(VERILATOR) +1800-2017ext+sv verilator.vlt --timing --binary --trace -Wall -cc --build --clk clk --top-module nandgate-sim altNandGate.sv nandgate-sim.sv 
-	obj_dir/Vnandgate-sim +trace
+	$(VERILATOR) +1800-2017ext+sv verilator.vlt --timing --binary --trace -Wall -cc --build --clk clk --top-module altNandGate altNandGate.sv altNandGate_sim.sv 
+	obj_dir/ValtNandGate +trace
 
 onebitadd-sim:
 	$(VERILATOR) +1800-2017ext+sv verilator.vlt -y unisims --lint-only oneBitAdder.sv

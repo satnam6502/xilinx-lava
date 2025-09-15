@@ -23,3 +23,4 @@ main
        writeSystemVerilog twoSorterTop
        writeSystemVerilog twoSorterRegTop
        writeSystemVerilog sorter4Top
+       writeSystemVerilog nand2LayoutTop

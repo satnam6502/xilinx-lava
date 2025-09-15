@@ -4,6 +4,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE DataKinds #-}
 module Lava.Simulation where
+import Control.Monad  
 import Control.Monad.Identity
 import Lava.Hardware
 import Data.Array.Shaped
@@ -55,12 +56,17 @@ instance Hardware Sim [Bool] where
   muxcy (s, (ci, di)) = return [if s' then ci' else di' | (s', (ci', di')) <- zip s (zip ci di)]
   carry4 :: [Bool] -> [Bool] -> Array '[4] [Bool] -> Array '[4] [Bool] -> Sim (Array '[4] [Bool], Array '[4] [Bool])
   carry4 = carry4ArraySim
+  lut1 :: (Bool -> Bool) -> [Bool] -> Sim [Bool]
+  lut1 f = return . map f
   lut2 :: (Bool -> Bool -> Bool) -> ([Bool], [Bool]) -> Sim [Bool]
   lut2 f (i0, i1) = return [f a b | (a, b) <- zip i0 i1]
   lut3 :: (Bool -> Bool -> Bool -> Bool) -> ([Bool], [Bool], [Bool]) -> Sim [Bool]
   lut3 f (i0, i1, i2) = return [f a b c | (a, b, c) <- zip3 i0 i1 i2]
   reg :: [Bool] -> Sim [Bool]
   reg = delay
+  (>->) :: (a -> Sim b) -> (b -> Sim c) -> a -> Sim c
+  (>->) = (>=>)
+
 
 carry4ArraySim:: [Bool] -> [Bool] -> Array '[4] [Bool] -> Array '[4] [Bool] -> Sim (Array '[4] [Bool], Array '[4] [Bool])
 carry4ArraySim ci cyinit di s
