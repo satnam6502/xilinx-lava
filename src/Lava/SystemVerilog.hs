@@ -115,7 +115,7 @@ instantiateUNISIM' ic component
 
 showRLOC :: Maybe RLOC -> String
 showRLOC Nothing = ""
-showRLOC (Just (RLOC x y)) = "(* RLOC = \"X" ++ show x ++ "Y" ++ show y ++ "\" *) "
+showRLOC (Just (RLOC x y)) = "  (* RLOC = \"X" ++ show x ++ "Y" ++ show y ++ "\" *)"
 
 showNet :: Net a -> String
 showNet signal

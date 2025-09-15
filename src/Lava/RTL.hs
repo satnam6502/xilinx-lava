@@ -366,20 +366,51 @@ unsmashA = mapA unsmash
 
 computeLayout :: [Layout (Int, Statement)] -> [(Int, Statement)]
 computeLayout nl
-  = concatBlocks nl2
+  = concat nlLayoutComputed
     where
-    nl2 = computeLayout' nl -- Compute beside and below
+    nlWithSizes = map computeSizesTop nl -- Compute sizes induced by the beside and below combinators.
+    nlLayoutComputed = map applyLayout nlWithSizes
+
+applyLayout :: Layout (Int, Statement) -> [(Int, Statement)]
+applyLayout (Block b) = b
+applyLayout (Beside _ a b) = applyLayout a ++ applyLayout b
+applyLayout (Below _ a b) = applyLayout a ++ applyLayout b
 
 concatBlocks :: [Layout (Int, Statement)] -> [(Int, Statement)]
 concatBlocks [] = []
 concatBlocks ((Block b):nl) = b ++ concatBlocks nl
 concatBlocks other = error ("concatBlocks: expected Block at head instance: " ++ show other)
 
-computeLayout' :: [Layout (Int, Statement)] -> [Layout (Int, Statement)]
-computeLayout' [] = []
-computeLayout' ((Block b):nl) = Block b : computeLayout' nl
-computeLayout' ((Beside a b):nl) = computeLayout' [a, b] ++ computeLayout' nl
-computeLayout' ((Below a b):nl)  = computeLayout' [a, b] ++ computeLayout' nl
+-- Don't process top level Blocks for layout.
+computeSizesTop :: Layout (Int, Statement) -> Layout (Int, Statement)
+computeSizesTop (Block b) = Block b
+computeSizesTop other = computeSizes other
+
+computeSizes :: Layout (Int, Statement) -> Layout (Int, Statement)
+computeSizes (Block b) = Block (map initLayout b)
+computeSizes (Beside _ a b)
+   = Beside (aw + bw, ah `max` bh) a' b'
+     where
+     a' = computeSizes a
+     b' = computeSizes b
+     (aw, ah) = blockSize a'
+     (bw, bh) = blockSize b'
+computeSizes (Below _ a b)
+   = Below (aw `max` bw, ah + bh) a' b'
+     where
+     a' = computeSizes a
+     b' = computeSizes b
+     (aw, ah) = blockSize a'
+     (bw, bh) = blockSize b'
+
+initLayout :: (Int, Statement) -> (Int, Statement)
+initLayout (n, UNISIM Nothing inst) = (n, UNISIM (Just (RLOC 0 0)) inst)
+initLayout other = other
+
+blockSize :: Layout (Int, Statement) -> (Int, Int)
+blockSize (Block _) = (1, 1)
+blockSize (Beside wh _ _) = wh
+blockSize (Below wh _ _) = wh
 
 leftToRightSerialComposition :: (a -> RTL b) -> (b -> RTL c) -> a -> RTL c
 leftToRightSerialComposition a b x
@@ -389,6 +420,6 @@ leftToRightSerialComposition a b x
        pushGraph
        r <- b y
        bBlock <- popGraph
-       addLayoutBlock (Beside aBlock bBlock)
+       addLayoutBlock (Beside (0, 0) aBlock bBlock)
        return r
 

@@ -8,9 +8,9 @@ where
 import Control.Monad.State.Lazy ( execState, State , get, put)
 
 data Layout a
-  = Block [a]
-  | Beside (Layout a) (Layout a)
-  | Below (Layout a) (Layout a)
+  = Block  [a]
+  | Beside (Int, Int) (Layout a) (Layout a)
+  | Below  (Int, Int) (Layout a) (Layout a)
 
 deriving instance Show a => Show (Layout a)
 
@@ -69,7 +69,7 @@ popGraph
        return b
        
 popBlock :: [Layout a] -> (Layout a, [Layout a])
-popBlock ((Block b):bs) = (Block b, bs)
+popBlock (blk@(Block _):bs) = (blk, bs)
 popBlock _ = error "popBlock: top instance is not a Block"
 
 addLayoutBlock :: Layout (Int, a) -> Lava t a ()
@@ -79,6 +79,6 @@ addLayoutBlock b
        put (graph{nodes = insertLayoutBlock b nodesList})
 
 insertLayoutBlock :: Layout a -> [Layout a] -> [Layout a]
-insertLayoutBlock lb (Block b : nl) = Block b : lb :nl
+insertLayoutBlock lb (blk@(Block _) : nl) = blk : lb :nl
 insertLayoutBlock _ _ = error "insertLayoutBlock: top instance is not Block"
 
