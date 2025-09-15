@@ -72,7 +72,7 @@ showVecIndexType idxs = concat ["[" ++ show (hi-1) ++ ":0]" | hi <- idxs]
 
 emitStatement :: (Int, Statement) -> [String]
 emitStatement (n, PrimitiveInstanceStatement inst) = instantiateComponent n inst
-emitStatement (n, UNISIM inst) = instantiateUNISIM n inst
+emitStatement (n, UNISIM rloc inst) = [instantiateUNISIM n rloc inst]
 emitStatement (_, LocalNetDeclaration n typ) = ["  " ++ showType typ ++ " net" ++ show n ++ ";"]
 emitStatement (_, Delay clk lhs rhs) = ["  always_ff @(posedge " ++ showNet clk ++ ") " ++ showNet lhs ++ " <= " ++ showNet rhs ++ ";"]
 emitStatement (_, Assignment lhs rhs) = ["  assign " ++ showNet lhs ++ " = " ++ showNet rhs ++ ";"]
@@ -91,24 +91,31 @@ instantiateComponent ic component
       XorPrim inputs o  -> ["  xor xor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
       XnorPrim inputs o  -> [" xnor xnor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
       Xor2Prim cin part_sum o -> ["  XOR2 xor2_" ++ show ic ++ " " ++ showNamedArgs ["I0", "I1", "O"] [cin, part_sum, o] ++ ";"]
-     
-instantiateUNISIM :: Int -> UNISIMInstance -> [String]
-instantiateUNISIM ic component
+
+instantiateUNISIM :: Int -> Maybe RLOC -> UNISIMInstance -> String
+instantiateUNISIM ic rloc component = showRLOC rloc ++ instantiateUNISIM' ic component
+
+instantiateUNISIM' :: Int -> UNISIMInstance -> String
+instantiateUNISIM' ic component
   = case component of
-      XorcyPrim cin part_sum o -> ["  XORCY xorcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "LI", "O"] [cin, part_sum, o] ++ ";"]
-      MuxcyPrim s ci di o -> ["  MUXCY muxcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "DI", "S", "O"] [ci, di, s, o] ++ ";"]
-      Lut1Prim config i o -> ["  LUT1 #(.INIT(2'h" ++ intToHex config ++ ")) lut1_" ++ show ic ++ showNamedArgs ["I", "O"] [i, o] ++ ";"]
-      Lut2Prim config i0 i1 o -> ["  LUT2 #(.INIT(4'h" ++ intToHex config ++ ")) lut2_" ++ show ic ++ showNamedArgs ["I0", "I1", "O"] [i0, i1, o] ++ ";"]
-      Lut3Prim config i0 i1 i2 o -> ["  LUT3 #(.INIT(8'h" ++ intToHex config ++ ")) lut3_" ++ show ic ++ showNamedArgs ["I0", "I1", "I2", "O"] [i0, i1,i2,  o] ++ ";"]
-      Carry4Prim ci cyinit di s o co -> ["  CARRY4 carry4_" ++ show ic ++ " (" ++
+      XorcyPrim cin part_sum o -> "  XORCY xorcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "LI", "O"] [cin, part_sum, o] ++ ";"
+      MuxcyPrim s ci di o -> "  MUXCY muxcy_" ++ show ic ++ " " ++ showNamedArgs ["CI", "DI", "S", "O"] [ci, di, s, o] ++ ";"
+      Lut1Prim config i o -> "  LUT1 #(.INIT(2'h" ++ intToHex config ++ ")) lut1_" ++ show ic ++ showNamedArgs ["I", "O"] [i, o] ++ ";"
+      Lut2Prim config i0 i1 o -> "  LUT2 #(.INIT(4'h" ++ intToHex config ++ ")) lut2_" ++ show ic ++ showNamedArgs ["I0", "I1", "O"] [i0, i1, o] ++ ";"
+      Lut3Prim config i0 i1 i2 o -> "  LUT3 #(.INIT(8'h" ++ intToHex config ++ ")) lut3_" ++ show ic ++ showNamedArgs ["I0", "I1", "I2", "O"] [i0, i1,i2,  o] ++ ";"
+      Carry4Prim ci cyinit di s o co ->  "  CARRY4 carry4_" ++ show ic ++ " (" ++
                                          ".CI(" ++ showNet ci ++ "), " ++
                                          ".CYINIT(" ++ showNet cyinit ++ "), " ++
                                          ".DI(" ++ showArrayNet di ++ ")," ++
                                          ".S(" ++ showArrayNet s ++ ")," ++
                                          ".O(" ++ showArrayNet o ++ ")," ++
-                                         ".CO(" ++ showArrayNet co ++ "));"]
-      FDCEPrim d c ce clr o -> ["  FDCE  fdce_" ++ show ic ++ " " ++ showNamedArgs ["D", "C", "CE", "CLR", "Q"] [d, c, ce, clr, o] ++ ";"]
-      BufGPrim i o -> ["  BUFG bufg_" ++ show ic ++ " " ++ showNamedArgs ["I", "O"] [i, o] ++ ";"]               
+                                         ".CO(" ++ showArrayNet co ++ "));"
+      FDCEPrim d c ce clr o -> "  FDCE  fdce_" ++ show ic ++ " " ++ showNamedArgs ["D", "C", "CE", "CLR", "Q"] [d, c, ce, clr, o] ++ ";"
+      BufGPrim i o -> "  BUFG bufg_" ++ show ic ++ " " ++ showNamedArgs ["I", "O"] [i, o] ++ ";"               
+
+showRLOC :: Maybe RLOC -> String
+showRLOC Nothing = ""
+showRLOC (Just (RLOC x y)) = "(* RLOC = \"X" ++ show x ++ "Y" ++ show y ++ "\" *) "
 
 showNet :: Net a -> String
 showNet signal

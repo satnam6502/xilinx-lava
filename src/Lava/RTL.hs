@@ -56,9 +56,12 @@ typeOfNet (LocalNet _ typ) = typ
 typeOfNet (IndexedNet _ _ (VecType _ typ)) = typ
 typeOfNet (VecLiteral _ typ) = typ
 
+data RLOC = RLOC Int Int
+            deriving (Eq, Show)
+
 data Statement
    = PrimitiveInstanceStatement PrimitiveInstance
-   | UNISIM UNISIMInstance
+   | UNISIM (Maybe RLOC) UNISIMInstance
    | forall a . LocalNetDeclaration Int (NetType a)
    | forall a. Delay (Net Bit) (Net a) (Net a)
    | forall a. Assignment (Net a) (Net a)
@@ -191,7 +194,7 @@ binaryPrimitive' primitive (i0, i1)
 binaryUnism' :: (Net Bit -> Net Bit -> Net Bit -> UNISIMInstance) -> (Net Bit, Net Bit) -> RTL (Net Bit)
 binaryUnism' primitive (i0, i1)
   = do o <- mkNet BitType
-       mkNode (UNISIM (primitive i0 i1 o))
+       mkNode (UNISIM Nothing (primitive i0 i1 o))
        return o
 
 input3Primitive :: (Net Bit -> Net Bit -> Net Bit -> Net Bit -> PrimitiveInstance) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
@@ -203,7 +206,7 @@ input3Primitive primitive (i0, i1, i2)
 input3UNISM :: (Net Bit -> Net Bit -> Net Bit -> Net Bit -> UNISIMInstance) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
 input3UNISM primitive (i0, i1, i2)
   = do o <- mkNet BitType
-       mkNode (UNISIM (primitive i0 i1 i2 o))
+       mkNode (UNISIM Nothing(primitive i0 i1 i2 o))
        return o
 
 boolVecToInt :: [Bool] -> Int
@@ -214,7 +217,7 @@ boolVecToInt (True:xs) =  1 + 2 * boolVecToInt xs
 lut1RTL :: (Bool -> Bool) -> Net Bit -> RTL (Net Bit)
 lut1RTL f i
   = do o <- mkNet BitType
-       mkNode (UNISIM (Lut1Prim (boolVecToInt progBits) i o))
+       mkNode (UNISIM Nothing (Lut1Prim (boolVecToInt progBits) i o))
        return o
     where
     progBits = [f a | a <- [False, True]]
@@ -222,7 +225,7 @@ lut1RTL f i
 lut2RTL :: (Bool -> Bool -> Bool) -> (Net Bit, Net Bit) -> RTL (Net Bit)
 lut2RTL f (i0, i1)
   = do o <- mkNet BitType
-       mkNode (UNISIM (Lut2Prim (boolVecToInt progBits) i0 i1 o))
+       mkNode (UNISIM Nothing (Lut2Prim (boolVecToInt progBits) i0 i1 o))
        return o
     where
     progBits = [f b a | a <- [False, True], b <- [False, True]]
@@ -230,7 +233,7 @@ lut2RTL f (i0, i1)
 lut3RTL :: (Bool -> Bool -> Bool -> Bool) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
 lut3RTL f (i0, i1, i2)
   = do o <- mkNet BitType
-       mkNode (UNISIM (Lut3Prim (boolVecToInt progBits) i0 i1 i2 o))
+       mkNode (UNISIM Nothing (Lut3Prim (boolVecToInt progBits) i0 i1 i2 o))
        return o
     where
     progBits = [f c b a | a <- [False, True], b <- [False, True], c <- [False, True]]
@@ -239,13 +242,13 @@ carry4RTL :: Net Bit -> Net Bit -> Array '[4] (Net Bit) -> Array '[4] (Net Bit) 
 carry4RTL ci cyinit di s
   = do o <- mkVecNet BitType
        co <- mkVecNet BitType
-       mkNode (UNISIM (Carry4Prim ci cyinit di s o co))
+       mkNode (UNISIM Nothing (Carry4Prim ci cyinit di s o co))
        return (o, co)
 
 bufG :: Net Bit -> RTL (Net Bit)
 bufG i
   = do o <- mkNet BitType
-       mkNode (UNISIM (BufGPrim i o))
+       mkNode (UNISIM Nothing (BufGPrim i o))
        return o
 
 setClockNet :: String -> RTL ()
@@ -301,7 +304,7 @@ regRTL i
        clk <- getClockNet
        rst <- getResetNet
        setClockUsed
-       mkNode (UNISIM (FDCEPrim i clk One rst o))
+       mkNode (UNISIM Nothing (FDCEPrim i clk One rst o))
        return o
 
 input :: String -> NetType (a::NetKind) -> RTL (Net a)
