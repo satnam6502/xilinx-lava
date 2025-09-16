@@ -36,7 +36,7 @@ class Monad m => Hardware m bit | m -> bit where
   -- Layout combinators
   (>->) :: (a -> m b) -> (b -> m c) -> a -> m c -- Left to right serial composition
   vpar2 ::  (a -> m b) -> (c -> m d) -> (a, c) -> m (b, d) -- two vertically aligned blocks in a parallel composition
-  vpar :: forall n a b . KnownNat n => (a -> m b) -> Array '[n] a -> m (Array '[n] b)
+  vmap :: forall n a b . KnownNat n => (a -> m b) -> Array '[n] a -> m (Array '[n] b)
 
 inv :: Hardware m bit => bit -> m bit
 inv = lut1 not

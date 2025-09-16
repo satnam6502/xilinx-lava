@@ -38,5 +38,5 @@ carry4Top (a, b)
        return (unScalar (carryOut `index` 3))
 
 sub4L :: Hardware m bit => (Array '[4] bit, Array '[4] bit) -> m bit
-sub4L (a, b) = (zipArray >=> vpar xnor2 >=> pairLeft a >=> carry4Top) (a, b)
+sub4L (a, b) = (zipArray >=> vmap xnor2 >=> pairLeft a >=> carry4Top) (a, b)
 

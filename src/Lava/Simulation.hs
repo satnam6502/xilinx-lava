@@ -8,6 +8,7 @@ import Control.Monad
 import Control.Monad.Identity
 import Lava.Hardware
 import Data.Array.Shaped
+import GHC.TypeLits
 
 type Sim = Identity
 
@@ -70,7 +71,8 @@ instance Hardware Sim [Bool] where
   vpar2 f g (a, b) = do x <- f a
                         y <- g b
                         return (x, y)
-  vpar f a = traverseA id (mapA f a) 
+  vmap :: KnownNat n => (a -> Sim b) -> Array '[n] a -> Sim (Array '[n] b)
+  vmap f a = traverseA id (mapA f a) 
 
 carry4ArraySim:: [Bool] -> [Bool] -> Array '[4] [Bool] -> Array '[4] [Bool] -> Sim (Array '[4] [Bool], Array '[4] [Bool])
 carry4ArraySim ci cyinit di s

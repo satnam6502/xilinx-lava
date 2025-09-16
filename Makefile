@@ -1,6 +1,6 @@
 VERSION=6.0.0.0
 VERILATOR ?= verilator
-VCOMP = $(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal 
+VCOMP = $(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -j  --threads 8 -y unisims --timing --binary -Wall -Wno-fatal 
 
 .PHONY: build doc sdist test tests all formal pc
 

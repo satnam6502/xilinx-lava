@@ -93,7 +93,7 @@ instantiateComponent ic component
       Xor2Prim cin part_sum o -> ["  XOR2 xor2_" ++ show ic ++ " " ++ showNamedArgs ["I0", "I1", "O"] [cin, part_sum, o] ++ ";"]
 
 instantiateUNISIM :: Int -> Maybe BEL -> Maybe RLOC -> UNISIMInstance -> String
-instantiateUNISIM ic _ rloc component = showRLOC rloc ++ instantiateUNISIM' ic component
+instantiateUNISIM ic bel rloc component = showLayout (showBEL bel ++ showRLOC rloc) ++ instantiateUNISIM' ic component
 
 instantiateUNISIM' :: Int -> UNISIMInstance -> String
 instantiateUNISIM' ic component
@@ -113,9 +113,17 @@ instantiateUNISIM' ic component
       FDCEPrim d c ce clr o -> "  FDCE  fdce_" ++ show ic ++ " " ++ showNamedArgs ["D", "C", "CE", "CLR", "Q"] [d, c, ce, clr, o] ++ ";"
       BufGPrim i o -> "  BUFG bufg_" ++ show ic ++ " " ++ showNamedArgs ["I", "O"] [i, o] ++ ";"               
 
-showRLOC :: Maybe RLOC -> String
-showRLOC Nothing = ""
-showRLOC (Just (RLOC x y)) = "  (* RLOC = \"X" ++ show x ++ "Y" ++ show y ++ "\" *)"
+showLayout :: [String] -> String
+showLayout [] = ""
+showLayout xs = "  (* " ++ insertString ", " xs ++ " *) "
+
+showRLOC :: Maybe RLOC -> [String]
+showRLOC Nothing = []
+showRLOC (Just (RLOC x y)) = ["RLOC = \"X" ++ show x ++ "Y" ++ show y ++ "\""]
+
+showBEL :: Maybe BEL -> [String]
+showBEL Nothing = []
+showBEL (Just bel) = ["BEL = \"" ++ show bel ++ "\""]
 
 showNet :: Net a -> String
 showNet signal

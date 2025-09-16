@@ -161,8 +161,8 @@ instance Hardware RTL (Net Bit) where
   (>->) = leftToRightSerialComposition
   vpar2 :: (a -> RTL b) -> (c -> RTL d) -> (a, c) -> RTL (b, d)
   vpar2 = vpar2RTL
-  vpar :: KnownNat n => (a -> RTL b) -> Array '[n] a -> RTL (Array '[n] b)
-  vpar = vparRTL
+  vmap :: KnownNat n => (a -> RTL b) -> Array '[n] a -> RTL (Array '[n] b)
+  vmap = vmapRTL
 
 addLocalDec :: Int -> NetType a -> RTL ()
 addLocalDec n typ
@@ -379,10 +379,11 @@ unsmashA = mapA unsmash
 
 computeLayout :: [Layout (Int, Statement)] -> [(Int, Statement)]
 computeLayout nl
-  = concat nlLayoutComputed
+  = map computeBEL preBELnl
     where
     nlWithSizes = map computeSizesTop nl -- Compute sizes induced by the beside and below combinators.
     nlLayoutComputed = map applyLayout nlWithSizes
+    preBELnl = concat nlLayoutComputed
 
 applyLayout :: Layout (Int, Statement) -> [(Int, Statement)]
 applyLayout (Block b) = b
@@ -442,6 +443,7 @@ computeBEL :: (Int, Statement) -> (Int, Statement)
 computeBEL (n, UNISIM _ r@(Just (RLOC _ y)) (p@(Lut1Prim {}))) = (n, UNISIM (Just (lutBEL y)) r p)
 computeBEL (n, UNISIM _ r@(Just (RLOC _ y)) (p@(Lut2Prim {}))) = (n, UNISIM (Just (lutBEL y)) r p)
 computeBEL (n, UNISIM _ r@(Just (RLOC _ y)) (p@(Lut3Prim {}))) = (n, UNISIM (Just (lutBEL y)) r p)
+computeBEL (n, UNISIM _ r@(Just (RLOC _ y)) (p@(FDCEPrim {}))) = (n, UNISIM (Just (fdceBEL y)) r p)
 computeBEL other = other
 
 lutBEL :: Int -> BEL
@@ -452,6 +454,15 @@ lutBEL y
       2 -> C6LUT
       3 -> D6LUT
       _ -> error "lutBel: bad y index"
+
+fdceBEL :: Int -> BEL
+fdceBEL y
+  = case y `mod` 4 of
+      0 -> AFF
+      1 -> BFF
+      2 -> CFF
+      3 -> DFF
+      _ -> error "fdceBEL: bad y index"
 
 leftToRightSerialComposition :: (a -> RTL b) -> (b -> RTL c) -> a -> RTL c
 leftToRightSerialComposition a b x
@@ -482,8 +493,8 @@ blockify f a
        aBlock <- popGraph
        return (aBlock, b)
 
-
-vparRTL :: forall n a b . KnownNat n => (a -> RTL b) -> Array '[n] a -> RTL (Array '[n] b)
-vparRTL f a
+vmapRTL :: forall n a b . KnownNat n => (a -> RTL b) -> Array '[n] a -> RTL (Array '[n] b)
+vmapRTL f a
   = do -- bTiled <- par (blockify f) a
        par f a
+
