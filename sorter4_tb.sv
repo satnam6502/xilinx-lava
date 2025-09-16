@@ -1,4 +1,4 @@
-module sorter4_tb();
+module sorter4_tb;
   
   // Test signals
   logic [3:0][3:0] a;  // Input vector of 4 unsigned 4-bit numbers

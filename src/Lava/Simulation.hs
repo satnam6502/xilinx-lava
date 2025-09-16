@@ -66,7 +66,11 @@ instance Hardware Sim [Bool] where
   reg = delay
   (>->) :: (a -> Sim b) -> (b -> Sim c) -> a -> Sim c
   (>->) = (>=>)
-
+  vpar2 ::  (a -> Sim b) -> (c -> Sim d) -> (a, c) -> Sim (b, d)
+  vpar2 f g (a, b) = do x <- f a
+                        y <- g b
+                        return (x, y)
+  vpar f a = traverseA id (mapA f a) 
 
 carry4ArraySim:: [Bool] -> [Bool] -> Array '[4] [Bool] -> Array '[4] [Bool] -> Sim (Array '[4] [Bool], Array '[4] [Bool])
 carry4ArraySim ci cyinit di s

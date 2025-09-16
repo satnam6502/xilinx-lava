@@ -6,8 +6,9 @@ module Lava.Graph (Lava, Graph(..),
                    pushGraph, popGraph, addLayoutBlock)
 where
 import Control.Monad.State.Lazy ( execState, State , get, put)
+import GHC.Stack
 
-data Layout a
+data Show a => Layout a
   = Block  [a]
   | Beside (Int, Int) (Layout a) (Layout a)
   | Below  (Int, Int) (Layout a) (Layout a)
@@ -23,10 +24,10 @@ data Graph t nodeType = Graph {
 
 type Lava t nodeType = State (Graph t nodeType)
 
-initialState :: t ->  Graph t nodeType
+initialState :: Show nodeType => t ->  Graph t nodeType
 initialState initVal = Graph 0 0 initVal [Block []]
 
-computeGraph :: t -> Lava t nodeType a -> Graph t nodeType
+computeGraph :: Show nodeType => t -> Lava t nodeType a -> Graph t nodeType
 computeGraph initData nl = execState nl (initialState initData)
 
 mkNewNodeNumber :: Lava t nodeType Int
@@ -36,14 +37,14 @@ mkNewNodeNumber
        put (graph{nodeCount = nc +1})
        return nc
 
-mkNode :: nodeType -> Lava t nodeType ()
+mkNode :: Show nodeType => nodeType -> Lava t nodeType ()
 mkNode nodeValue
   = do n <- mkNewNodeNumber
        graph <- get
        let nodesList = nodes graph
        put (graph{nodes = addNode nodesList (n, nodeValue)})
 
-addNode :: [Layout a] -> a -> [Layout a]
+addNode :: Show a => [Layout a] -> a -> [Layout a]
 addNode ((Block n):xs) node  = (Block (node:n)):xs
 addNode _ _ = error "addNode: Adding node but head of instances is not Block"
 
@@ -54,13 +55,13 @@ mkNewEdgeNumber
        put (graph{netCount = ec +1})
        return ec
 
-pushGraph :: Lava t nodeType ()
+pushGraph :: Show nodeType => Lava t nodeType ()
 pushGraph
   = do graph <- get
        let nodesList = nodes graph
        put (graph{nodes = Block [] : nodesList})
 
-popGraph :: Lava t nodeType (Layout (Int, nodeType))
+popGraph :: Show nodeType => Lava t nodeType (Layout (Int, nodeType))
 popGraph
   = do graph <- get
        let nodesList = nodes graph
@@ -68,17 +69,17 @@ popGraph
        put (graph{nodes = nl})
        return b
        
-popBlock :: [Layout a] -> (Layout a, [Layout a])
+popBlock :: Show a => [Layout a] -> (Layout a, [Layout a])
 popBlock (blk@(Block _):bs) = (blk, bs)
-popBlock _ = error "popBlock: top instance is not a Block"
+popBlock other = error ("popBlock: top instance is not a Block: " ++ show other)
 
-addLayoutBlock :: Layout (Int, a) -> Lava t a ()
+addLayoutBlock :: (HasCallStack, Show a) => Layout (Int, a) -> Lava t a ()
 addLayoutBlock b
   = do graph <- get
        let nodesList = nodes graph
        put (graph{nodes = insertLayoutBlock b nodesList})
 
-insertLayoutBlock :: Layout a -> [Layout a] -> [Layout a]
-insertLayoutBlock lb (blk@(Block _) : nl) = blk : lb :nl
-insertLayoutBlock _ _ = error "insertLayoutBlock: top instance is not Block"
+insertLayoutBlock :: (HasCallStack, Show a) => Layout a -> [Layout a] -> [Layout a]
+insertLayoutBlock lb layouts = layouts ++ [lb]
+
 

@@ -29,3 +29,14 @@ sub4Top
        (subOut, carryOut) <- sub4 a b
        outputVec "subOut" subOut BitType
        output "carryOut" carryOut
+
+carry4Top :: Hardware m bit => (Array '[4] bit, Array '[4] bit) -> m bit
+carry4Top (a, b)
+  = do b0 <- zero
+       b1 <- one
+       (_, carryOut) <- carry4 b0 b1 b a
+       return (unScalar (carryOut `index` 3))
+
+sub4L :: Hardware m bit => (Array '[4] bit, Array '[4] bit) -> m bit
+sub4L (a, b) = (zipArray >=> vpar xnor2 >=> pairLeft a >=> carry4Top) (a, b)
+

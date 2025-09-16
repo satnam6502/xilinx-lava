@@ -72,7 +72,7 @@ showVecIndexType idxs = concat ["[" ++ show (hi-1) ++ ":0]" | hi <- idxs]
 
 emitStatement :: (Int, Statement) -> [String]
 emitStatement (n, PrimitiveInstanceStatement inst) = instantiateComponent n inst
-emitStatement (n, UNISIM rloc inst) = [instantiateUNISIM n rloc inst]
+emitStatement (n, UNISIM bel rloc inst) = [instantiateUNISIM n bel rloc inst]
 emitStatement (_, LocalNetDeclaration n typ) = ["  " ++ showType typ ++ " net" ++ show n ++ ";"]
 emitStatement (_, Delay clk lhs rhs) = ["  always_ff @(posedge " ++ showNet clk ++ ") " ++ showNet lhs ++ " <= " ++ showNet rhs ++ ";"]
 emitStatement (_, Assignment lhs rhs) = ["  assign " ++ showNet lhs ++ " = " ++ showNet rhs ++ ";"]
@@ -92,8 +92,8 @@ instantiateComponent ic component
       XnorPrim inputs o  -> [" xnor xnor_" ++ show ic ++ " " ++ showArgs (o:inputs) ++ ";"]
       Xor2Prim cin part_sum o -> ["  XOR2 xor2_" ++ show ic ++ " " ++ showNamedArgs ["I0", "I1", "O"] [cin, part_sum, o] ++ ";"]
 
-instantiateUNISIM :: Int -> Maybe RLOC -> UNISIMInstance -> String
-instantiateUNISIM ic rloc component = showRLOC rloc ++ instantiateUNISIM' ic component
+instantiateUNISIM :: Int -> Maybe BEL -> Maybe RLOC -> UNISIMInstance -> String
+instantiateUNISIM ic _ rloc component = showRLOC rloc ++ instantiateUNISIM' ic component
 
 instantiateUNISIM' :: Int -> UNISIMInstance -> String
 instantiateUNISIM' ic component

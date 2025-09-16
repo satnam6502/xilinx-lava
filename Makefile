@@ -1,11 +1,12 @@
 VERSION=6.0.0.0
 VERILATOR ?= verilator
+VCOMP = $(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal 
 
 .PHONY: build doc sdist test tests all formal pc
 
 all:	test tests formal
         
-tests: nandgate-sim onebitadd-sim adder4-sim sub4-sim twoSorter-sim sorter4-sim
+tests: nandgate-sim onebitadd-sim adder4-sim sub4-sim twoSorter-sim twoSorterReg-sim sorter4-sim
 
 formal:	adder4-eqy sub4-eqy muxN8-eqy twoSorter-eqy twoSorterReg-eqy
 
@@ -25,34 +26,34 @@ test:
 	cabal test
 
 nandgate-sim:
-	$(VERILATOR) +1800-2017ext+sv verilator.vlt --timing --binary --trace -Wall -cc --build --clk clk --top-module altNandGate altNandGate.sv altNandGate_sim.sv 
+	$(VCOMP) --top-module altNandGate altNandGate.sv altNandGate_sim.sv 
 	obj_dir/ValtNandGate +trace
 
 onebitadd-sim:
-	$(VERILATOR) +1800-2017ext+sv verilator.vlt -y unisims --lint-only oneBitAdder.sv
+	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --lint-only oneBitAdder.sv
 
 adder4-sim:
-	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal --top-module adder4_tb adder4.sv adder4_tb.sv
+	$(VCOMP) --top-module adder4_tb adder4.sv adder4_tb.sv
 	obj_dir/Vadder4_tb +trace
 
-adder4-eqy:
-	eqy -f adder4.eqy
-
 sub4-sim:
-	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal --top-module sub4_tb sub4.sv sub4_tb.sv
+	$(VCOMP) --top-module sub4_tb sub4.sv sub4_tb.sv
 	obj_dir/Vsub4_tb +trace
 
 twoSorter-sim:
-	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --trace --binary -Wall -Wno-fatal --top-module twoSorter_tb twoSorter_tb.sv
+	$(VCOMP) --top-module twoSorter_tb twoSorter.sv twoSorter_tb.sv
 	obj_dir/VtwoSorter_tb +trace
 
 twoSorterReg-sim:
-	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --trace --binary -Wall -Wno-fatal --top-module twoSorterReg_tb twoSorterReg_tb.sv
+	$(VCOMP) --top-module twoSorterReg_tb twoSorterReg.sv twoSorterReg_tb.sv
 	obj_dir/VtwoSorterReg_tb +trace
 
 sorter4-sim:
-	$(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -y unisims --timing --binary -Wall -Wno-fatal --top-module sorter4_tb sorter4_tb.sv
+	$(VCOMP) --top-module sorter4_tb sorter4.sv sorter4_tb.sv
 	obj_dir/Vsorter4_tb +trace
+
+adder4-eqy:
+	eqy -f adder4.eqy
 
 sub4-eqy:
 	eqy -f sub4.eqy

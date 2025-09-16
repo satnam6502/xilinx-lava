@@ -14,17 +14,22 @@
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Redundant bracket" #-}
+{-# HLINT ignore "Use record patterns" #-}
 
 module Lava.RTL
 where
 import Lava.Graph
 import Lava.Hardware
+import Lava.Combinators
 import Control.Monad ( when )
 import Control.Monad.State.Lazy (MonadState(put, get) )
 import Data.Array.Shaped
 import GHC.TypeLits
 import GHC.TypeNats
 import Data.Proxy
+import GHC.Stack
 
 data NetKind
   = Bit
@@ -59,9 +64,13 @@ typeOfNet (VecLiteral _ typ) = typ
 data RLOC = RLOC Int Int
             deriving (Eq, Show)
 
+data BEL = A6LUT | B6LUT | C6LUT | D6LUT
+         | AFF | BFF | CFF | DFF
+        deriving (Eq, Show)
+
 data Statement
    = PrimitiveInstanceStatement PrimitiveInstance
-   | UNISIM (Maybe RLOC) UNISIMInstance
+   | UNISIM (Maybe BEL) (Maybe RLOC) UNISIMInstance
    | forall a . LocalNetDeclaration Int (NetType a)
    | forall a. Delay (Net Bit) (Net a) (Net a)
    | forall a. Assignment (Net a) (Net a)
@@ -150,6 +159,10 @@ instance Hardware RTL (Net Bit) where
   reg = regRTL
   (>->) :: (a -> RTL b) -> (b -> RTL c) -> a -> RTL c
   (>->) = leftToRightSerialComposition
+  vpar2 :: (a -> RTL b) -> (c -> RTL d) -> (a, c) -> RTL (b, d)
+  vpar2 = vpar2RTL
+  vpar :: KnownNat n => (a -> RTL b) -> Array '[n] a -> RTL (Array '[n] b)
+  vpar = vparRTL
 
 addLocalDec :: Int -> NetType a -> RTL ()
 addLocalDec n typ
@@ -194,7 +207,7 @@ binaryPrimitive' primitive (i0, i1)
 binaryUnism' :: (Net Bit -> Net Bit -> Net Bit -> UNISIMInstance) -> (Net Bit, Net Bit) -> RTL (Net Bit)
 binaryUnism' primitive (i0, i1)
   = do o <- mkNet BitType
-       mkNode (UNISIM Nothing (primitive i0 i1 o))
+       mkNode (UNISIM Nothing Nothing (primitive i0 i1 o))
        return o
 
 input3Primitive :: (Net Bit -> Net Bit -> Net Bit -> Net Bit -> PrimitiveInstance) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
@@ -206,7 +219,7 @@ input3Primitive primitive (i0, i1, i2)
 input3UNISM :: (Net Bit -> Net Bit -> Net Bit -> Net Bit -> UNISIMInstance) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
 input3UNISM primitive (i0, i1, i2)
   = do o <- mkNet BitType
-       mkNode (UNISIM Nothing(primitive i0 i1 i2 o))
+       mkNode (UNISIM Nothing Nothing(primitive i0 i1 i2 o))
        return o
 
 boolVecToInt :: [Bool] -> Int
@@ -217,7 +230,7 @@ boolVecToInt (True:xs) =  1 + 2 * boolVecToInt xs
 lut1RTL :: (Bool -> Bool) -> Net Bit -> RTL (Net Bit)
 lut1RTL f i
   = do o <- mkNet BitType
-       mkNode (UNISIM Nothing (Lut1Prim (boolVecToInt progBits) i o))
+       mkNode (UNISIM Nothing Nothing (Lut1Prim (boolVecToInt progBits) i o))
        return o
     where
     progBits = [f a | a <- [False, True]]
@@ -225,7 +238,7 @@ lut1RTL f i
 lut2RTL :: (Bool -> Bool -> Bool) -> (Net Bit, Net Bit) -> RTL (Net Bit)
 lut2RTL f (i0, i1)
   = do o <- mkNet BitType
-       mkNode (UNISIM Nothing (Lut2Prim (boolVecToInt progBits) i0 i1 o))
+       mkNode (UNISIM Nothing Nothing (Lut2Prim (boolVecToInt progBits) i0 i1 o))
        return o
     where
     progBits = [f b a | a <- [False, True], b <- [False, True]]
@@ -233,7 +246,7 @@ lut2RTL f (i0, i1)
 lut3RTL :: (Bool -> Bool -> Bool -> Bool) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
 lut3RTL f (i0, i1, i2)
   = do o <- mkNet BitType
-       mkNode (UNISIM Nothing (Lut3Prim (boolVecToInt progBits) i0 i1 i2 o))
+       mkNode (UNISIM Nothing Nothing (Lut3Prim (boolVecToInt progBits) i0 i1 i2 o))
        return o
     where
     progBits = [f c b a | a <- [False, True], b <- [False, True], c <- [False, True]]
@@ -242,13 +255,13 @@ carry4RTL :: Net Bit -> Net Bit -> Array '[4] (Net Bit) -> Array '[4] (Net Bit) 
 carry4RTL ci cyinit di s
   = do o <- mkVecNet BitType
        co <- mkVecNet BitType
-       mkNode (UNISIM Nothing (Carry4Prim ci cyinit di s o co))
+       mkNode (UNISIM Nothing Nothing (Carry4Prim ci cyinit di s o co))
        return (o, co)
 
 bufG :: Net Bit -> RTL (Net Bit)
 bufG i
   = do o <- mkNet BitType
-       mkNode (UNISIM Nothing (BufGPrim i o))
+       mkNode (UNISIM Nothing Nothing (BufGPrim i o))
        return o
 
 setClockNet :: String -> RTL ()
@@ -304,7 +317,7 @@ regRTL i
        clk <- getClockNet
        rst <- getResetNet
        setClockUsed
-       mkNode (UNISIM Nothing (FDCEPrim i clk One rst o))
+       mkNode (UNISIM Nothing Nothing (FDCEPrim i clk One rst o))
        return o
 
 input :: String -> NetType (a::NetKind) -> RTL (Net a)
@@ -382,11 +395,6 @@ applyLayout (Below _ a b)
     where
     (_, dy) = blockSize a
 
-concatBlocks :: [Layout (Int, Statement)] -> [(Int, Statement)]
-concatBlocks [] = []
-concatBlocks ((Block b):nl) = b ++ concatBlocks nl
-concatBlocks other = error ("concatBlocks: expected Block at head instance: " ++ show other)
-
 -- Don't process top level Blocks for layout.
 computeSizesTop :: Layout (Int, Statement) -> Layout (Int, Statement)
 computeSizesTop (Block b) = Block b
@@ -410,7 +418,7 @@ computeSizes (Below _ a b)
      (bw, bh) = blockSize b'
 
 initLayout :: (Int, Statement) -> (Int, Statement)
-initLayout (n, UNISIM Nothing inst) = (n, UNISIM (Just (RLOC 0 0)) inst)
+initLayout (n, UNISIM bel Nothing inst) = (n, UNISIM bel (Just (RLOC 0 0)) inst)
 initLayout other = other
 
 blockSize :: Layout (Int, Statement) -> (Int, Int)
@@ -426,9 +434,24 @@ translateBlock dxdy block
       Below wh a b -> Below wh (translateBlock dxdy a) (translateBlock dxdy b)
 
 translateInstance :: (Int, Int) -> (Int, Statement) -> (Int, Statement)
-translateInstance (dx, dy) (instNr, UNISIM Nothing inst) = (instNr, UNISIM (Just (RLOC dx dy)) inst)
-translateInstance (dx, dy) (instNr, UNISIM (Just (RLOC x y)) inst) = (instNr, UNISIM (Just (RLOC (x+dx) (y+dy))) inst)
+translateInstance (dx, dy) (instNr, UNISIM bel Nothing inst) = (instNr, UNISIM bel (Just (RLOC dx dy)) inst)
+translateInstance (dx, dy) (instNr, UNISIM bel (Just (RLOC x y)) inst) = (instNr, UNISIM bel (Just (RLOC (x+dx) (y+dy))) inst)
 translateInstance _ other = other
+
+computeBEL :: (Int, Statement) -> (Int, Statement)
+computeBEL (n, UNISIM _ r@(Just (RLOC _ y)) (p@(Lut1Prim {}))) = (n, UNISIM (Just (lutBEL y)) r p)
+computeBEL (n, UNISIM _ r@(Just (RLOC _ y)) (p@(Lut2Prim {}))) = (n, UNISIM (Just (lutBEL y)) r p)
+computeBEL (n, UNISIM _ r@(Just (RLOC _ y)) (p@(Lut3Prim {}))) = (n, UNISIM (Just (lutBEL y)) r p)
+computeBEL other = other
+
+lutBEL :: Int -> BEL
+lutBEL y
+  = case y `mod` 4 of
+      0 -> A6LUT
+      1 -> B6LUT
+      2 -> C6LUT
+      3 -> D6LUT
+      _ -> error "lutBel: bad y index"
 
 leftToRightSerialComposition :: (a -> RTL b) -> (b -> RTL c) -> a -> RTL c
 leftToRightSerialComposition a b x
@@ -441,3 +464,26 @@ leftToRightSerialComposition a b x
        addLayoutBlock (Beside (0, 0) aBlock bBlock)
        return r
 
+vpar2RTL :: HasCallStack => (a -> RTL b) -> (c -> RTL d) -> (a, c) -> RTL (b, d)
+vpar2RTL f g (a, b)
+  = do pushGraph
+       x <- f a
+       aBlock <- popGraph
+       pushGraph
+       y <- g b
+       bBlock <- popGraph
+       addLayoutBlock (Below (0, 0) aBlock bBlock)
+       return (x, y)
+
+blockify :: (a -> RTL b) -> a -> RTL (Layout (Int, Statement), b)
+blockify f a
+  = do pushGraph
+       b <- f a
+       aBlock <- popGraph
+       return (aBlock, b)
+
+
+vparRTL :: forall n a b . KnownNat n => (a -> RTL b) -> Array '[n] a -> RTL (Array '[n] b)
+vparRTL f a
+  = do -- bTiled <- par (blockify f) a
+       par f a

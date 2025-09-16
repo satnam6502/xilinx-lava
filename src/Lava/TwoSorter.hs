@@ -38,8 +38,9 @@ twoSorterA a
     x = unScalar (index a 0)
     y = unScalar (index a 1)
 
-twoSorterReg :: Hardware m bit => Array '[2] (Array '[4] bit) -> m (Array '[2] (Array '[4] bit))
-twoSorterReg = twoSorterA >=> par vreg
+twoSorterReg :: Hardware m bit => (Array '[4] bit, Array '[4] bit) ->
+                               m (Array '[4] bit, Array '[4] bit)
+twoSorterReg = twoSorter >=> par2 (par reg) (par reg)
 
 twoSorterRegTop :: RTL ()
 twoSorterRegTop
@@ -48,7 +49,13 @@ twoSorterRegTop
        setActiveLowResetNet "rstN"
        a :: Array '[4] (Net Bit) <- inputVec "a" BitType
        b :: Array '[4] (Net Bit) <- inputVec "b" BitType
-       cd <- twoSorterReg (fromList [a, b])
-       let cdL = toList cd
-       outputVec "c" (cdL!!0) BitType
-       outputVec "d" (cdL!!1) BitType
+       (c, d) <- twoSorterRegL (a, b)
+       outputVec "c" c BitType
+       outputVec "d" d BitType
+
+twoSorterRegL :: Hardware m bit => (Array '[4] bit, Array '[4] bit) -> m (Array '[4] bit, Array '[4] bit)
+twoSorterRegL (a, b) = (fork >=> vpar2 (         sub4L >-> mux >=> par reg)
+                                       (swap >=> sub4L >-> mux >=> par reg)) (a, b)
+            where
+            mux s = muxN s (a, b)
+
