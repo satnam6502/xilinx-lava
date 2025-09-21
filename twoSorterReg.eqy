@@ -12,4 +12,3 @@ synth -top twoSorterReg
 
 [strategy simple]
 use sat
-depth 10

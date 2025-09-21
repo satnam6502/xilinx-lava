@@ -15,7 +15,9 @@ import Numeric (showHex)
 
 writeSystemVerilog :: RTL () -> IO ()
 writeSystemVerilog topModule
-  = writeFile (fileName ++ ".sv") (unlines (systemVerilogText fileName topModule))
+  = do putStr ("Writing " ++ fileName ++ ".sv ...")
+       writeFile (fileName ++ ".sv") (unlines (systemVerilogText fileName topModule))
+       putStrLn ""
     where
     fileName = if moduleName nl == "" then
                  error "No module name set"
@@ -93,7 +95,7 @@ instantiateComponent ic component
       Xor2Prim cin part_sum o -> ["  XOR2 xor2_" ++ show ic ++ " " ++ showNamedArgs ["I0", "I1", "O"] [cin, part_sum, o] ++ ";"]
 
 instantiateUNISIM :: Int -> Maybe BEL -> Maybe RLOC -> UNISIMInstance -> String
-instantiateUNISIM ic bel rloc component = showLayout (showBEL bel ++ showRLOC rloc) ++ instantiateUNISIM' ic component
+instantiateUNISIM ic bel rloc component = showLayout (showBEL bel ++ showRLOC rloc) ++ instantiateUNISIM' ic component ++ " // " ++ show rloc
 
 instantiateUNISIM' :: Int -> UNISIMInstance -> String
 instantiateUNISIM' ic component
@@ -119,7 +121,7 @@ showLayout xs = "  (* " ++ insertString ", " xs ++ " *) "
 
 showRLOC :: Maybe RLOC -> [String]
 showRLOC Nothing = []
-showRLOC (Just (RLOC x y)) = ["RLOC = \"X" ++ show x ++ "Y" ++ show y ++ "\""]
+showRLOC (Just (RLOC x y)) = ["RLOC = \"X" ++ show x ++ "Y" ++ show (y `div` 4) ++ "\""]
 
 showBEL :: Maybe BEL -> [String]
 showBEL Nothing = []

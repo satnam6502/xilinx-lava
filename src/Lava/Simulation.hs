@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeOperators #-}
 module Lava.Simulation where
 import Control.Monad  
 import Control.Monad.Identity
@@ -67,12 +68,14 @@ instance Hardware Sim [Bool] where
   reg = delay
   (>->) :: (a -> Sim b) -> (b -> Sim c) -> a -> Sim c
   (>->) = (>=>)
+  (>|>) :: (a -> Sim b) -> (b -> Sim c) -> a -> Sim c
+  (>|>) = (>|>)
   vpar2 ::  (a -> Sim b) -> (c -> Sim d) -> (a, c) -> Sim (b, d)
   vpar2 f g (a, b) = do x <- f a
                         y <- g b
                         return (x, y)
   vmap :: KnownNat n => (a -> Sim b) -> Array '[n] a -> Sim (Array '[n] b)
-  vmap f a = traverseA id (mapA f a) 
+  vmap = traverseA
 
 carry4ArraySim:: [Bool] -> [Bool] -> Array '[4] [Bool] -> Array '[4] [Bool] -> Sim (Array '[4] [Bool], Array '[4] [Bool])
 carry4ArraySim ci cyinit di s

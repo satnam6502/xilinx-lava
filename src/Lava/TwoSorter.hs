@@ -15,9 +15,9 @@ import Lava.Sub4
 twoSorter :: Hardware m bit => (Array '[4] bit, Array '[4] bit) ->
                                m (Array '[4] bit, Array '[4] bit)
 twoSorter (a, b)
-  = do (_, cout1) <- sub4 a b
+  = do (_, cout1) <- sub4 (a, b)
        x <- muxN cout1 (a, b)
-       (_, cout2) <- sub4 b a
+       (_, cout2) <- sub4 (b, a)
        y <- muxN cout2 (a, b)
        return (x, y)
 
@@ -40,7 +40,7 @@ twoSorterA a
 
 twoSorterReg :: Hardware m bit => (Array '[4] bit, Array '[4] bit) ->
                                m (Array '[4] bit, Array '[4] bit)
-twoSorterReg = twoSorter >=> par2 (par reg) (par reg)
+twoSorterReg = twoSorter >=> par2 (traverseA reg) (traverseA reg)
 
 twoSorterRegTop :: RTL ()
 twoSorterRegTop
@@ -54,8 +54,24 @@ twoSorterRegTop
        outputVec "d" d BitType
 
 twoSorterRegL :: Hardware m bit => (Array '[4] bit, Array '[4] bit) -> m (Array '[4] bit, Array '[4] bit)
-twoSorterRegL (a, b) = (fork >=> vpar2 (         sub4L >-> mux >=> par reg)
-                                       (swap >=> sub4L >-> mux >=> par reg)) (a, b)
+twoSorterRegL (a, b) = (fork >-> vpar2 (         sub4OnlyCarryOut >-> (mux >|> vmap reg))
+                                       (swap >-> sub4OnlyCarryOut >-> (mux >|> vmap reg))) (a, b)
             where
             mux s = muxN s (a, b)
 
+max2 :: Hardware m bit => (Array '[4] bit, Array '[4] bit) -> m (Array '[4] bit)
+max2 (a, b) = (sub4OnlyCarryOut >-> (mux >|> vmap reg)) (a, b)
+       where
+       mux s = muxN s (a, b)
+
+max2Top :: RTL ()
+max2Top
+  = do setModuleName "max2"
+       setClockNet "clk"
+       setActiveLowResetNet "rstN"
+       a :: Array '[4] (Net Bit) <- inputVec "a" BitType
+       b :: Array '[4] (Net Bit) <- inputVec "b" BitType
+       c <- max2 (a, b)
+       outputVec "c" c BitType
+
+  

@@ -17,19 +17,20 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Redundant bracket" #-}
 {-# HLINT ignore "Use record patterns" #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Lava.RTL
 where
 import Lava.Graph
 import Lava.Hardware
-import Lava.Combinators
-import Control.Monad ( when )
 import Control.Monad.State.Lazy (MonadState(put, get) )
 import Data.Array.Shaped
 import GHC.TypeLits
 import GHC.TypeNats
 import Data.Proxy
 import GHC.Stack
+import Control.Monad
+
 
 data NetKind
   = Bit
@@ -157,8 +158,10 @@ instance Hardware RTL (Net Bit) where
   carry4 = carry4RTL
   reg :: Net Bit -> RTL (Net Bit)
   reg = regRTL
-  (>->) :: (a -> RTL b) -> (b -> RTL c) -> a -> RTL c
+  (>->) :: HasCallStack => (a -> RTL b) -> (b -> RTL c) -> a -> RTL c
   (>->) = leftToRightSerialComposition
+  (>|>):: (a -> RTL b) -> (b -> RTL c) -> a -> RTL c
+  (>|>) = overlay
   vpar2 :: (a -> RTL b) -> (c -> RTL d) -> (a, c) -> RTL (b, d)
   vpar2 = vpar2RTL
   vmap :: KnownNat n => (a -> RTL b) -> Array '[n] a -> RTL (Array '[n] b)
@@ -189,37 +192,37 @@ mkVecNet t
 invRTL :: Net Bit -> RTL (Net Bit)
 invRTL i
   = do o <- mkNet BitType
-       mkNode (PrimitiveInstanceStatement (NotPrim i o))
+       addNode (PrimitiveInstanceStatement (NotPrim i o))
        return o
 
 binaryPrimitive :: ([Net Bit] -> Net Bit -> PrimitiveInstance) -> [Net Bit] -> RTL (Net Bit)
 binaryPrimitive primitive inputs
   = do o <- mkNet BitType
-       mkNode (PrimitiveInstanceStatement (primitive inputs o))
+       addNode (PrimitiveInstanceStatement (primitive inputs o))
        return o
 
 binaryPrimitive' :: (Net Bit -> Net Bit -> Net Bit -> PrimitiveInstance) -> (Net Bit, Net Bit) -> RTL (Net Bit)
 binaryPrimitive' primitive (i0, i1)
   = do o <- mkNet BitType
-       mkNode (PrimitiveInstanceStatement (primitive i0 i1 o))
+       addNode (PrimitiveInstanceStatement (primitive i0 i1 o))
        return o
 
 binaryUnism' :: (Net Bit -> Net Bit -> Net Bit -> UNISIMInstance) -> (Net Bit, Net Bit) -> RTL (Net Bit)
 binaryUnism' primitive (i0, i1)
   = do o <- mkNet BitType
-       mkNode (UNISIM Nothing Nothing (primitive i0 i1 o))
+       addNode (UNISIM Nothing Nothing (primitive i0 i1 o))
        return o
 
 input3Primitive :: (Net Bit -> Net Bit -> Net Bit -> Net Bit -> PrimitiveInstance) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
 input3Primitive primitive (i0, i1, i2)
   = do o <- mkNet BitType
-       mkNode (PrimitiveInstanceStatement (primitive i0 i1 i2 o))
+       addNode (PrimitiveInstanceStatement (primitive i0 i1 i2 o))
        return o
 
 input3UNISM :: (Net Bit -> Net Bit -> Net Bit -> Net Bit -> UNISIMInstance) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
 input3UNISM primitive (i0, i1, i2)
   = do o <- mkNet BitType
-       mkNode (UNISIM Nothing Nothing(primitive i0 i1 i2 o))
+       addNode (UNISIM Nothing Nothing (primitive i0 i1 i2 o))
        return o
 
 boolVecToInt :: [Bool] -> Int
@@ -230,7 +233,7 @@ boolVecToInt (True:xs) =  1 + 2 * boolVecToInt xs
 lut1RTL :: (Bool -> Bool) -> Net Bit -> RTL (Net Bit)
 lut1RTL f i
   = do o <- mkNet BitType
-       mkNode (UNISIM Nothing Nothing (Lut1Prim (boolVecToInt progBits) i o))
+       addNode (UNISIM Nothing Nothing (Lut1Prim (boolVecToInt progBits) i o))
        return o
     where
     progBits = [f a | a <- [False, True]]
@@ -238,7 +241,7 @@ lut1RTL f i
 lut2RTL :: (Bool -> Bool -> Bool) -> (Net Bit, Net Bit) -> RTL (Net Bit)
 lut2RTL f (i0, i1)
   = do o <- mkNet BitType
-       mkNode (UNISIM Nothing Nothing (Lut2Prim (boolVecToInt progBits) i0 i1 o))
+       addNode (UNISIM Nothing Nothing (Lut2Prim (boolVecToInt progBits) i0 i1 o))
        return o
     where
     progBits = [f b a | a <- [False, True], b <- [False, True]]
@@ -246,7 +249,7 @@ lut2RTL f (i0, i1)
 lut3RTL :: (Bool -> Bool -> Bool -> Bool) -> (Net Bit, Net Bit, Net Bit) -> RTL (Net Bit)
 lut3RTL f (i0, i1, i2)
   = do o <- mkNet BitType
-       mkNode (UNISIM Nothing Nothing (Lut3Prim (boolVecToInt progBits) i0 i1 i2 o))
+       addNode (UNISIM Nothing Nothing (Lut3Prim (boolVecToInt progBits) i0 i1 i2 o))
        return o
     where
     progBits = [f c b a | a <- [False, True], b <- [False, True], c <- [False, True]]
@@ -255,13 +258,13 @@ carry4RTL :: Net Bit -> Net Bit -> Array '[4] (Net Bit) -> Array '[4] (Net Bit) 
 carry4RTL ci cyinit di s
   = do o <- mkVecNet BitType
        co <- mkVecNet BitType
-       mkNode (UNISIM Nothing Nothing (Carry4Prim ci cyinit di s o co))
+       addNode (UNISIM Nothing Nothing (Carry4Prim ci cyinit di s o co))
        return (o, co)
 
 bufG :: Net Bit -> RTL (Net Bit)
 bufG i
   = do o <- mkNet BitType
-       mkNode (UNISIM Nothing Nothing (BufGPrim i o))
+       addNode (UNISIM Nothing Nothing (BufGPrim i o))
        return o
 
 setClockNet :: String -> RTL ()
@@ -308,7 +311,7 @@ delayRTL i
   = do o <- mkNet (typeOfNet i)
        clk <- getClockNet
        setClockUsed
-       mkNode (Delay clk i o)
+       addNode (Delay clk i o)
        return o
 
 regRTL :: Net Bit-> RTL (Net Bit)
@@ -317,7 +320,7 @@ regRTL i
        clk <- getClockNet
        rst <- getResetNet
        setClockUsed
-       mkNode (UNISIM Nothing Nothing (FDCEPrim i clk One rst o))
+       addNode (UNISIM Nothing Nothing (FDCEPrim i clk One rst o))
        return o
 
 input :: String -> NetType (a::NetKind) -> RTL (Net a)
@@ -337,7 +340,7 @@ inputVec name typ
     n' = fromIntegral (GHC.TypeNats.natVal (Proxy @n))
 
 assignment :: Net (a::NetKind) -> Net (a::NetKind) -> RTL ()
-assignment net expr = mkNode (Assignment net expr)
+assignment net expr = addNode (Assignment net expr)
 
 output :: String -> Net (a::NetKind) -> RTL ()
 output name net
@@ -386,7 +389,7 @@ computeLayout nl
     preBELnl = concat nlLayoutComputed
 
 applyLayout :: Layout (Int, Statement) -> [(Int, Statement)]
-applyLayout (Block b) = b
+applyLayout (Block b) = [b]
 applyLayout (Beside _ a b)
   = applyLayout a ++ applyLayout (translateBlock (dx, 0) b)
     where
@@ -395,6 +398,7 @@ applyLayout (Below _ a b)
   = applyLayout a ++ applyLayout (translateBlock (0, dy) b)
     where
     (_, dy) = blockSize a
+applyLayout (Overlay _ a b) = applyLayout a ++ applyLayout b
 
 -- Don't process top level Blocks for layout.
 computeSizesTop :: Layout (Int, Statement) -> Layout (Int, Statement)
@@ -402,7 +406,7 @@ computeSizesTop (Block b) = Block b
 computeSizesTop other = computeSizes other
 
 computeSizes :: Layout (Int, Statement) -> Layout (Int, Statement)
-computeSizes (Block b) = Block (map initLayout b)
+computeSizes (Block b) = Block (initLayout b)
 computeSizes (Beside _ a b)
    = Beside (aw + bw, ah `max` bh) a' b'
      where
@@ -417,22 +421,32 @@ computeSizes (Below _ a b)
      b' = computeSizes b
      (aw, ah) = blockSize a'
      (bw, bh) = blockSize b'
+computeSizes (Overlay _ a b)
+   = Overlay (aw `max` bw, ah `max` bh) a' b'
+     where
+     a' = computeSizes a
+     b' = computeSizes b
+     (aw, ah) = blockSize a'
+     (bw, bh) = blockSize b'
 
 initLayout :: (Int, Statement) -> (Int, Statement)
 initLayout (n, UNISIM bel Nothing inst) = (n, UNISIM bel (Just (RLOC 0 0)) inst)
 initLayout other = other
 
 blockSize :: Layout (Int, Statement) -> (Int, Int)
-blockSize (Block _) = (1, 1)
+blockSize (Block (_, UNISIM _ (Just _) _)) = (1, 1)
+blockSize (Block {}) = (0, 0)
 blockSize (Beside wh _ _) = wh
 blockSize (Below wh _ _) = wh
+blockSize (Overlay wh _ _) = wh
 
 translateBlock :: (Int, Int) -> Layout (Int, Statement) -> Layout (Int, Statement)
 translateBlock dxdy block
   = case block of
-      Block b -> Block (map (translateInstance dxdy) b)
+      Block b -> Block (translateInstance dxdy b)
       Beside wh a b -> Beside wh (translateBlock dxdy a) (translateBlock dxdy b)
       Below wh a b -> Below wh (translateBlock dxdy a) (translateBlock dxdy b)
+      Overlay wh a b -> Overlay wh (translateBlock dxdy a) (translateBlock dxdy b)
 
 translateInstance :: (Int, Int) -> (Int, Statement) -> (Int, Statement)
 translateInstance (dx, dy) (instNr, UNISIM bel Nothing inst) = (instNr, UNISIM bel (Just (RLOC dx dy)) inst)
@@ -464,37 +478,58 @@ fdceBEL y
       3 -> DFF
       _ -> error "fdceBEL: bad y index"
 
-leftToRightSerialComposition :: (a -> RTL b) -> (b -> RTL c) -> a -> RTL c
-leftToRightSerialComposition a b x
-  = do pushGraph
-       y <- a x
-       aBlock <- popGraph
-       pushGraph
-       r <- b y
-       bBlock <- popGraph
-       addLayoutBlock (Beside (0, 0) aBlock bBlock)
-       return r
+netlistSize :: RTL Int
+netlistSize
+  = do graph <- get
+       return (length (nodes graph))
+
+
+
+
+binaryLayoutCombinator :: HasCallStack =>
+                          (Layout (Int, Statement) -> Layout (Int, Statement) -> Layout (Int, Statement)) ->
+                          (a -> RTL b) -> (b -> RTL c) -> a -> RTL c
+binaryLayoutCombinator combinator a b x
+  = do s1 <- netlistSize
+       y :: b <- a x
+       s2 <- netlistSize
+       r :: c <- b y
+       s3 <- netlistSize
+       if ((s1 - s2 == 0) || (s3 - s2 == 0)) then return r
+       else do bBlock <- popBlock
+               aBlock <- popBlock
+               addLayoutBlock (combinator aBlock bBlock)
+               return r
+
+leftToRightSerialComposition :: HasCallStack => (a -> RTL b) -> (b -> RTL c) -> a -> RTL c
+leftToRightSerialComposition = binaryLayoutCombinator (Beside (0, 0))
+
+overlay :: HasCallStack => (a -> RTL b) -> (b -> RTL c) -> a -> RTL c
+overlay = binaryLayoutCombinator (Overlay (0, 0))
 
 vpar2RTL :: HasCallStack => (a -> RTL b) -> (c -> RTL d) -> (a, c) -> RTL (b, d)
 vpar2RTL f g (a, b)
-  = do pushGraph
-       x <- f a
-       aBlock <- popGraph
-       pushGraph
-       y <- g b
-       bBlock <- popGraph
-       addLayoutBlock (Below (0, 0) aBlock bBlock)
-       return (x, y)
+  = do s1 <- netlistSize
+       x :: b <- f a
+       s2 <- netlistSize
+       y :: d <- g b
+       s3 <- netlistSize
+       if ((s1 - s2 == 0) || (s3 - s2 == 0)) then return (x, y)
+       else do bBlock <- popBlock
+               aBlock <- popBlock
+               addLayoutBlock (Below (0, 0) aBlock bBlock)
+               return (x, y)
 
-blockify :: (a -> RTL b) -> a -> RTL (Layout (Int, Statement), b)
-blockify f a
-  = do pushGraph
-       b <- f a
-       aBlock <- popGraph
-       return (aBlock, b)
-
-vmapRTL :: forall n a b . KnownNat n => (a -> RTL b) -> Array '[n] a -> RTL (Array '[n] b)
+vmapRTL :: forall n a b . (HasCallStack, KnownNat n)  => (a -> RTL b) -> Array '[n] a -> RTL (Array '[n] b)
 vmapRTL f a
-  = do -- bTiled <- par (blockify f) a
-       par f a
+  = do b <- traverseA f a
+       blocks <- popN n'
+       addLayoutBlock (foldBelow (reverse blocks))
+       return b
+    where
+    n' = fromIntegral (GHC.TypeNats.natVal (Proxy @n))
 
+foldBelow :: HasCallStack => [Layout (Int, Statement)] -> Layout (Int, Statement)
+foldBelow [] = error "foldBeside got empty list"
+foldBelow [x] = x
+foldBelow (x:xs) = Below (0,0) x (foldBelow xs)

@@ -65,6 +65,7 @@ library
     -- Modules exported by the library.
     exposed-modules:  Lava
                       Lava.Examples.NandGate
+                      Lava.Examples.InvN
                       Lava.OneBitAdder
                       Lava.Adder4
                       Lava.Sub4

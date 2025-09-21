@@ -10,8 +10,10 @@ module Lava.Hardware
 where
 import Data.Array.Shaped
 import GHC.TypeLits
+import GHC.Stack
 
-infixr 5 >->
+infixr 1 >->
+infixr 1 >|>
 
 class Monad m => Hardware m bit | m -> bit where
   -- Generic gates
@@ -34,7 +36,8 @@ class Monad m => Hardware m bit | m -> bit where
   carry4 :: bit -> bit -> Array '[4] bit -> Array '[4] bit -> m (Array '[4] bit, Array '[4] bit) -- ci -> cyinit -> (di, s) -> (o, co)
   reg :: bit -> m bit
   -- Layout combinators
-  (>->) :: (a -> m b) -> (b -> m c) -> a -> m c -- Left to right serial composition
+  (>->) :: HasCallStack => (a -> m b) -> (b -> m c) -> a -> m c -- Left to right serial composition
+  (>|>) :: (a -> m b) -> (b -> m c) -> a -> m c -- overlay
   vpar2 ::  (a -> m b) -> (c -> m d) -> (a, c) -> m (b, d) -- two vertically aligned blocks in a parallel composition
   vmap :: forall n a b . KnownNat n => (a -> m b) -> Array '[n] a -> m (Array '[n] b)
 

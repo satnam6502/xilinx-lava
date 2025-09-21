@@ -1,6 +1,9 @@
 VERSION=6.0.0.0
 VERILATOR ?= verilator
-VCOMP = $(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -j  --threads 8 -y unisims --timing --binary -Wall -Wno-fatal 
+VCOMP = $(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -j 0 --threads 8 -y unisims --timing --binary -Wall -Wno-fatal 
+
+GENERATED_SV = altNandGate.sv altNandGate_sim.sv invN.sv inv4x2.sv oneBitAdder.sv adder4.sv sub4.sv muxN8.sv \
+               twoSorter.sv twoSorterReg.svmax2.sv sorter4.sv nand2Layout.sv
 
 .PHONY: build doc sdist test tests all formal pc
 
@@ -73,6 +76,9 @@ twoSorter-eqy:
 twoSorterReg-eqy:
 	eqy -f twoSorterReg.eqy
 
+twoSorterReg-impl:
+	vivado -mode batch -source twoSorterReg.tcl
+
 pc:
 	cp *.sv /Volumes/ardberg/home/satnam/xilinx-lava
 	cp *.v /Volumes/ardberg/home/satnam/xilinx-lava
@@ -84,4 +90,4 @@ workflow:
 	haskell-ci github xilinx-lava.cabal
 
 clean:
-	rm -rf obj_dir
+	rm -rf obj_dir && cabal clean && rm -rf $(GENERATED_SV)

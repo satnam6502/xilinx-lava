@@ -14,7 +14,7 @@
 -- | Generic combinators for system construction.
 
 module Lava.Combinators (module Control.Monad,
-       fork, loop, par, par2, halve, unhalve, pair, unpair, zipA, unzipA,
+       fork, loop, par2, halve, unhalve, pair, unpair, zipA, unzipA,
        riffle, unriffle, two, evens, ilv, vreg, pairLeft, zipArray, swap)
 where
 import Control.Monad.Fix (MonadFix)
@@ -37,9 +37,6 @@ loop :: MonadFix m => ((a, feedback) -> m (b, feedback)) ->
 loop circuit a
   = mdo (c, feedback) <- circuit (a, feedback)
         return c
-
-par :: (KnownNat n, Applicative m) => (a -> m b) -> Array '[n] a -> m (Array '[n] b)
-par f a = traverseA id (mapA f a)
 
 par2 :: Monad m => (a -> m b) -> (c -> m d) -> (a, c) -> m (b, d)
 par2 f g (a, b)
@@ -72,16 +69,16 @@ unriffle :: (KnownNat n, Monad m) => Array '[2 * n] a -> m (Array '[2 * n] a)
 unriffle = pair >=> unzipA >=> unhalve
 
 two :: (KnownNat n, Monad m) => (Array '[n] a ->  m (Array '[n] a)) -> Array '[2 * n] a -> m (Array '[2 * n] a)
-two f = halve >=> par f >=> unhalve
+two f = halve >=> traverseA f >=> unhalve
 
 evens ::(KnownNat n, Monad m) => (Array '[2] a -> m (Array '[2] a)) -> Array '[n * 2] a -> m (Array '[n * 2] a)
-evens f = pair >=> par f >=> unpair
+evens f = pair >=> traverseA f >=> unpair
 
 ilv :: (KnownNat n, Monad m) => (Array '[n] a -> m (Array '[n] a)) -> Array '[n * 2] a -> m (Array '[n * 2] a)
 ilv r = unriffle >=> two r >=> riffle
 
 vreg :: (Hardware m bit, KnownNat n) => Array '[n] bit -> m (Array '[n] bit)
-vreg = par reg
+vreg = traverseA reg
 
 pairLeft :: Applicative m => a -> b -> m (b, a)
 pairLeft a b = pure (b, a)
