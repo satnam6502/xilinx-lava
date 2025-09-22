@@ -10,7 +10,7 @@ import GHC.Stack
 -- sub4 computes a - b for two unsigned values a and b, with wrap-around arithmetic.
 sub4 :: Hardware m bit => (Array '[4] bit, Array '[4] bit) -> m (Array '[4] bit, bit)
 sub4 (a, b)
-  =  (zipArray >|> vmap xnor2 >|> pairLeft a >|> carry4L) (a, b)
+  =  (zipArray >=> vmap xnor2 >|> pairLeft a >=> carry4L) (a, b)
 
 carry4L :: Hardware m bit => (Array '[4] bit, Array '[4] bit) -> m (Array '[4] bit, bit)
 carry4L (a, b)
@@ -34,5 +34,5 @@ carry4OnlyCarryOut (a, b)
        return carryOut
 
 sub4OnlyCarryOut :: (HasCallStack, Hardware m bit) => (Array '[4] bit, Array '[4] bit) -> m bit
-sub4OnlyCarryOut (a, b) = (zipArray >|> vmap xnor2 >|> pairLeft a >|> carry4OnlyCarryOut) (a, b)
+sub4OnlyCarryOut (a, b) = (zipArray >=> vmap xnor2 >|> pairLeft a >=> carry4OnlyCarryOut) (a, b)
 

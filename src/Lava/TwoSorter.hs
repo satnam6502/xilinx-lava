@@ -32,7 +32,7 @@ twoSorterTop
 
 twoSorterA :: Hardware m bit => Array '[2] (Array '[4] bit) -> m (Array '[2] (Array '[4] bit))
 twoSorterA a
-  = do (p, q) <- twoSorter (x, y)
+  = do (p, q) <- twoSorterRegL (x, y)
        return (fromList [p, q])
     where
     x = unScalar (index a 0)
@@ -54,8 +54,8 @@ twoSorterRegTop
        outputVec "d" d BitType
 
 twoSorterRegL :: Hardware m bit => (Array '[4] bit, Array '[4] bit) -> m (Array '[4] bit, Array '[4] bit)
-twoSorterRegL (a, b) = (fork >-> vpar2 (         sub4OnlyCarryOut >-> (mux >|> vmap reg))
-                                       (swap >-> sub4OnlyCarryOut >-> (mux >|> vmap reg))) (a, b)
+twoSorterRegL (a, b) = (fork >=> vpar2 (         sub4OnlyCarryOut >-> (mux >|> vmap reg))
+                                       (swap >=> sub4OnlyCarryOut >-> (mux >|> vmap reg))) (a, b)
             where
             mux s = muxN s (a, b)
 

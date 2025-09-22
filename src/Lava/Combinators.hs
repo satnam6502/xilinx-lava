@@ -68,17 +68,17 @@ riffle = halve >=> zipA >=> unpair
 unriffle :: (KnownNat n, Monad m) => Array '[2 * n] a -> m (Array '[2 * n] a)
 unriffle = pair >=> unzipA >=> unhalve
 
-two :: (KnownNat n, Monad m) => (Array '[n] a ->  m (Array '[n] a)) -> Array '[2 * n] a -> m (Array '[2 * n] a)
-two f = halve >=> traverseA f >=> unhalve
+two :: (KnownNat n, Hardware m bit) => (Array '[n] a ->  m (Array '[n] a)) -> Array '[2 * n] a -> m (Array '[2 * n] a)
+two f = halve >=> vmap f >=> unhalve
 
-evens ::(KnownNat n, Monad m) => (Array '[2] a -> m (Array '[2] a)) -> Array '[n * 2] a -> m (Array '[n * 2] a)
-evens f = pair >=> traverseA f >=> unpair
+evens ::(KnownNat n, Hardware m bit) => (Array '[2] a -> m (Array '[2] a)) -> Array '[n * 2] a -> m (Array '[n * 2] a)
+evens f = pair >=> vmap f >=> unpair
 
-ilv :: (KnownNat n, Monad m) => (Array '[n] a -> m (Array '[n] a)) -> Array '[n * 2] a -> m (Array '[n * 2] a)
+ilv :: (KnownNat n, Hardware m bit) => (Array '[n] a -> m (Array '[n] a)) -> Array '[n * 2] a -> m (Array '[n * 2] a)
 ilv r = unriffle >=> two r >=> riffle
 
 vreg :: (Hardware m bit, KnownNat n) => Array '[n] bit -> m (Array '[n] bit)
-vreg = traverseA reg
+vreg = vmap reg
 
 pairLeft :: Applicative m => a -> b -> m (b, a)
 pairLeft a b = pure (b, a)

@@ -36,7 +36,7 @@ type family ToExpNat (n :: N) :: Nat where
 
 -- A butterfly of degree n maps 2^n inputs to 2^n outputs.
 class Bfly (n :: N) where
-  bfly :: forall a m . Monad m => (Array '[2] a -> m (Array '[2] a)) -> Array '[ToExpNat n] a -> m (Array '[ToExpNat n] a)
+  bfly :: forall a m bit . Hardware m bit => (Array '[2] a -> m (Array '[2] a)) -> Array '[ToExpNat n] a -> m (Array '[ToExpNat n] a)
 
 -- A butterfly of degree 1 is just the r component i.e. it maps 2 inputs to 2 outputs.
 instance Bfly One where
@@ -44,7 +44,7 @@ instance Bfly One where
 
 -- A butterfly of degree n is recursively defined in terms of two smaller butterflies of degree (n-1).
 instance (KnownNat (ToExpNat n), Bfly n) => Bfly (Succ n) where
-  bfly r = ilv (bfly @n r) >=> evens r
+  bfly r = ilv (bfly @n r) >-> evens r
 
 class BatchersSorter (n :: N) where
   batchersSorter :: Hardware m bit => Array '[ToExpNat n] (Array '[4] bit) -> m (Array '[ToExpNat n] (Array '[4] bit) )
@@ -55,7 +55,7 @@ instance BatchersSorter One where
 
 instance (KnownNat (ToExpNat n), Bfly n, BatchersSorter n) => BatchersSorter (Succ n) where
   batchersSorter :: (KnownNat (ToExpNat n), Bfly n, BatchersSorter n, Hardware m bit) => Array '[ToExpNat ('Succ n)] (Array '[4] bit) -> m (Array '[ToExpNat ('Succ n)] (Array '[4] bit))
-  batchersSorter = two (batchersSorter @n) >=> sndRev >=> bfly @(Succ n) twoSorterA
+  batchersSorter = two (batchersSorter @n) >-> sndRev >-> bfly @(Succ n) twoSorterA
 
 sndRev :: forall a n m. (KnownNat n, Monad m) => Array '[2 * n] a -> m (Array '[2 * n] a)
 sndRev a
@@ -70,6 +70,8 @@ sorter4 = batchersSorter @(Succ One)
 sorter4Top :: RTL ()
 sorter4Top
   = do setModuleName "sorter4"
+       setClockNet "clk"
+       setActiveLowResetNet "rstN"
        a :: Array '[4] (Net (VectorKind '[4] bit)) <- inputVec "a" (VecType [4] BitType)
        let a' = mapA smash a
        b <- sorter4 a'
