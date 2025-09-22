@@ -32,7 +32,7 @@ systemVerilogText fileName topModule
     declarePorts portList ++
     ["  );"
     ] ++
-    ["  " ++ showType typ ++ " net" ++ show n ++ ";" | LocalDec n typ <- localDecs gD] ++
+    ["(* DONT_TOUCH = \"true\" *)  " ++ showType typ ++ " net" ++ show n ++ ";" | LocalDec n typ <- localDecs gD] ++
     concatMap emitStatement components ++
     ["endmodule: " ++ name]
     where

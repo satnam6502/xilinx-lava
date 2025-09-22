@@ -36,7 +36,8 @@ type family ToExpNat (n :: N) :: Nat where
 
 -- A butterfly of degree n maps 2^n inputs to 2^n outputs.
 class Bfly (n :: N) where
-  bfly :: forall a m bit . Hardware m bit => (Array '[2] a -> m (Array '[2] a)) -> Array '[ToExpNat n] a -> m (Array '[ToExpNat n] a)
+  bfly :: forall m bit . Hardware m bit => (Array '[2] (Array '[4] bit) -> m (Array '[2] (Array '[4] bit))) ->
+                                           Array '[ToExpNat n] (Array '[4] bit) -> m (Array '[ToExpNat n] (Array '[4] bit) )
 
 -- A butterfly of degree 1 is just the r component i.e. it maps 2 inputs to 2 outputs.
 instance Bfly One where
@@ -47,15 +48,19 @@ instance (KnownNat (ToExpNat n), Bfly n) => Bfly (Succ n) where
   bfly r = ilv (bfly @n r) >-> evens r
 
 class BatchersSorter (n :: N) where
-  batchersSorter :: Hardware m bit => Array '[ToExpNat n] (Array '[4] bit) -> m (Array '[ToExpNat n] (Array '[4] bit) )
+  batchersSorter :: Hardware m bit => (Array '[2] (Array '[4] bit) -> m (Array '[2] (Array '[4] bit))) ->
+                                      Array '[ToExpNat n] (Array '[4] bit) -> m (Array '[ToExpNat n] (Array '[4] bit) )
 
 instance BatchersSorter One where
-  batchersSorter :: Hardware m bit => Array '[ToExpNat 'One] (Array '[4] bit) -> m (Array '[ToExpNat 'One] (Array '[4] bit))
-  batchersSorter = twoSorterA
+  batchersSorter :: Hardware m bit => (Array '[2] (Array '[4] bit) -> m (Array '[2] (Array '[4] bit))) ->
+                                       Array '[ToExpNat 'One] (Array '[4] bit) -> m (Array '[ToExpNat 'One] (Array '[4] bit))
+  batchersSorter sorter2 = sorter2
 
 instance (KnownNat (ToExpNat n), Bfly n, BatchersSorter n) => BatchersSorter (Succ n) where
-  batchersSorter :: (KnownNat (ToExpNat n), Bfly n, BatchersSorter n, Hardware m bit) => Array '[ToExpNat ('Succ n)] (Array '[4] bit) -> m (Array '[ToExpNat ('Succ n)] (Array '[4] bit))
-  batchersSorter = two (batchersSorter @n) >-> sndRev >-> bfly @(Succ n) twoSorterA
+  batchersSorter :: (KnownNat (ToExpNat n), Bfly n, BatchersSorter n, Hardware m bit) =>
+                    (Array '[2] (Array '[4] bit) -> m (Array '[2] (Array '[4] bit))) ->
+                    Array '[ToExpNat ('Succ n)] (Array '[4] bit) -> m (Array '[ToExpNat ('Succ n)] (Array '[4] bit))
+  batchersSorter sorter2 = two (batchersSorter @n sorter2) >-> sndRev >-> bfly @(Succ n) sorter2
 
 sndRev :: forall a n m. (KnownNat n, Monad m) => Array '[2 * n] a -> m (Array '[2 * n] a)
 sndRev a
@@ -64,8 +69,27 @@ sndRev a
            a1 = index (ravel ah) 1
        unhalve $ fromList @'[2] [index (ravel ah) 0, rev @'[0] a1]
 
+
+combinationalSorter :: forall n m bit . (KnownNat (ToExpNat n), Hardware m bit, BatchersSorter n) =>
+                   Array '[ToExpNat n] (Array '[4] bit) -> m (Array '[ToExpNat n] (Array '[4] bit) )
+combinationalSorter = batchersSorter @n twoSorterCombinatonal
+
+
+sorterComb4Top :: RTL ()
+sorterComb4Top
+  = do setModuleName "sorterComb4"
+       a :: Array '[4] (Net (VectorKind '[4] bit)) <- inputVec "a" (VecType [4] BitType)
+       let a' = mapA smash a
+       b <- combinationalSorter @(Succ One) a'
+       let b' :: Array '[4] (Net (VectorKind '[4] bit)) = unsmashA b
+       outputVec "b" b' (VecType [4] BitType)
+
+pipelinedSorter :: forall n m bit . (KnownNat (ToExpNat n), Hardware m bit, BatchersSorter n) =>
+                   Array '[ToExpNat n] (Array '[4] bit) -> m (Array '[ToExpNat n] (Array '[4] bit) )
+pipelinedSorter = batchersSorter @n twoSorterA
+
 sorter4 :: Hardware m bit => Array '[4] (Array '[4] bit) -> m (Array '[4] (Array '[4] bit))
-sorter4 = batchersSorter @(Succ One)
+sorter4 = pipelinedSorter @(Succ One)
 
 sorter4Top :: RTL ()
 sorter4Top
@@ -77,3 +101,57 @@ sorter4Top
        b <- sorter4 a'
        let b' :: Array '[4] (Net (VectorKind '[4] bit)) = unsmashA b
        outputVec "b" b' (VecType [4] BitType)
+
+sorter8 :: Hardware m bit => Array '[8] (Array '[4] bit) -> m (Array '[8] (Array '[4] bit))
+sorter8 = pipelinedSorter @(Succ (Succ One))
+
+sorter8Top :: RTL ()
+sorter8Top
+  = do setModuleName "sorter8"
+       setClockNet "clk"
+       setActiveLowResetNet "rstN"
+       a :: Array '[8] (Net (VectorKind '[4] bit)) <- inputVec "a" (VecType [4] BitType)
+       let a' = mapA smash a
+       b <- sorter8 a'
+       let b' :: Array '[8] (Net (VectorKind '[4] bit)) = unsmashA b
+       outputVec "b" b' (VecType [4] BitType)
+
+sorter16 :: Hardware m bit => Array '[16] (Array '[4] bit) -> m (Array '[16] (Array '[4] bit))
+sorter16 = pipelinedSorter @(Succ (Succ (Succ One)))
+
+sorter16Top :: RTL ()
+sorter16Top
+  = do setModuleName "sorter16"
+       setClockNet "clk"
+       setActiveLowResetNet "rstN"
+       a :: Array '[16] (Net (VectorKind '[4] bit)) <- inputVec "a" (VecType [4] BitType)
+       let a' = mapA smash a
+       b <- sorter16 a'
+       let b' :: Array '[16] (Net (VectorKind '[4] bit)) = unsmashA b
+       outputVec "b" b' (VecType [4] BitType)
+
+sorter32 :: Hardware m bit => Array '[32] (Array '[4] bit) -> m (Array '[32] (Array '[4] bit))
+sorter32 = pipelinedSorter @(Succ (Succ (Succ (Succ One))))
+
+sorter32Top :: RTL ()
+sorter32Top
+  = do setModuleName "sorter32"
+       setClockNet "clk"
+       setActiveLowResetNet "rstN"
+       a :: Array '[32] (Net (VectorKind '[4] bit)) <- inputVec "a" (VecType [4] BitType)
+       let a' = mapA smash a
+       b <- sorter32 a'
+       let b' :: Array '[32] (Net (VectorKind '[4] bit)) = unsmashA b
+       outputVec "b" b' (VecType [4] BitType)
+
+sorter64 :: Hardware m bit => Array '[64] (Array '[4] bit) -> m (Array '[64] (Array '[4] bit))
+sorter64 = pipelinedSorter @(Succ (Succ (Succ (Succ (Succ One)))))
+
+sorter64Top :: RTL ()
+sorter64Top
+  = do setModuleName "sorter64"
+       setClockNet "clk"
+       setActiveLowResetNet "rstN"
+       a :: Array '[4] (Net Bit)  <- inputVec "a" BitType
+       b <- sorter64 (fromList (replicate 64 a))
+       outputVec "b" (unScalar (b `index` 0)) BitType

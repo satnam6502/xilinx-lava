@@ -3,7 +3,9 @@ VERILATOR ?= verilator
 VCOMP = $(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -j 0 --threads 8 -y unisims --timing --binary -Wall -Wno-fatal 
 
 GENERATED_SV = altNandGate.sv altNandGate_sim.sv invN.sv inv4x2.sv oneBitAdder.sv adder4.sv sub4.sv muxN8.sv \
-               twoSorter.sv twoSorterReg.svmax2.sv sorter4.sv nand2Layout.sv
+               twoSorter.sv twoSorterReg.sv max2.sv \
+			   sorterComb4.sv sorter4.sv sorter8.sv sorter16.sv sorter32.sv sorter64.sv \
+			   nand2Layout.sv
 
 .PHONY: build doc sdist test tests all formal pc
 

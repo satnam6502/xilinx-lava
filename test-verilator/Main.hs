@@ -26,5 +26,10 @@ main
        writeSystemVerilog twoSorterTop
        writeSystemVerilog twoSorterRegTop
        writeSystemVerilog max2Top
+       writeSystemVerilog sorterComb4Top
        writeSystemVerilog sorter4Top
+       writeSystemVerilog sorter8Top
+       writeSystemVerilog sorter16Top
+       writeSystemVerilog sorter32Top
+       writeSystemVerilog sorter64Top
        writeSystemVerilog nand2LayoutTop

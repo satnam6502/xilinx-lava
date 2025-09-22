@@ -10,7 +10,7 @@ module sorter4_tb;
   integer fail_count = 0;
   
   // Instantiate the DUT (Device Under Test)
-  sorter4 dut (
+  sorterComb4 dut (
     .a(a),
     .b(b)
   );

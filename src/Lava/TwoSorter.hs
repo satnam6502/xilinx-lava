@@ -30,6 +30,15 @@ twoSorterTop
        outputVec "c" c BitType
        outputVec "d" d BitType
 
+twoSorterCombinatonal :: Hardware m bit => Array '[2] (Array '[4] bit) -> m (Array '[2] (Array '[4] bit))
+twoSorterCombinatonal i
+  = do (c, d) <- twoSorter (a, b)
+       return (fromList [c, d])
+    where
+    a = unScalar (i `index` 0)
+    b = unScalar (i `index` 1)
+
+-- A pipelined version of the twoSorter
 twoSorterA :: Hardware m bit => Array '[2] (Array '[4] bit) -> m (Array '[2] (Array '[4] bit))
 twoSorterA a
   = do (p, q) <- twoSorterRegL (x, y)
