@@ -4,7 +4,7 @@ VCOMP = $(VERILATOR) +1800-2017ext+sv +define+XIL_XECLIB=1 verilator.vlt -j 0 --
 
 GENERATED_SV = altNandGate.sv altNandGate_sim.sv invN.sv inv4x2.sv oneBitAdder.sv adder4.sv sub4.sv muxN8.sv \
                twoSorter.sv twoSorterReg.sv max2.sv \
-			   sorterComb4.sv sorter4.sv sorter8.sv sorter16.sv sorter32.sv sorter64.sv \
+			   sorterComb4.sv sorter4.sv sorter8.sv sorter16.sv sorter32.sv sorter64.sv sorter128.sv sorter256.sv \
 			   nand2Layout.sv
 
 .PHONY: build doc sdist test tests all formal pc

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 module Lava.Examples.InvN where
 
 import Lava
@@ -23,3 +24,4 @@ inv4x2Top
        (c, d) <- inv4x2 (a, b)
        output "c" c
        output "c" d
+

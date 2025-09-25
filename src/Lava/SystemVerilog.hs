@@ -13,6 +13,8 @@ import Data.Array.Shaped
 import GHC.TypeLits
 import Numeric (showHex)
 
+-- RLOC_ORIGIN = "X36Y50"
+
 writeSystemVerilog :: RTL () -> IO ()
 writeSystemVerilog topModule
   = do putStr ("Writing " ++ fileName ++ ".sv ...")
@@ -95,6 +97,7 @@ instantiateComponent ic component
       Xor2Prim cin part_sum o -> ["  XOR2 xor2_" ++ show ic ++ " " ++ showNamedArgs ["I0", "I1", "O"] [cin, part_sum, o] ++ ";"]
 
 instantiateUNISIM :: Int -> Maybe BEL -> Maybe RLOC -> UNISIMInstance -> String
+instantiateUNISIM ic bel rloc component@(Carry4Prim {}) = showLayout (showBEL bel) ++ instantiateUNISIM' ic component ++ " // " ++ show rloc
 instantiateUNISIM ic bel rloc component = showLayout (showBEL bel ++ showRLOC rloc) ++ instantiateUNISIM' ic component ++ " // " ++ show rloc
 
 instantiateUNISIM' :: Int -> UNISIMInstance -> String

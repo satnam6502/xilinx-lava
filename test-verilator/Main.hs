@@ -22,6 +22,7 @@ main
        writeSystemVerilog oneBitAdderTop
        writeSystemVerilog adder4Top
        writeSystemVerilog sub4Top
+       writeSystemVerilog sub128Top
        writeSystemVerilog muxN8Top
        writeSystemVerilog twoSorterTop
        writeSystemVerilog twoSorterRegTop
@@ -32,4 +33,6 @@ main
        writeSystemVerilog sorter16Top
        writeSystemVerilog sorter32Top
        writeSystemVerilog sorter64Top
+       writeSystemVerilog sorter128Top
+       writeSystemVerilog sorter256Top
        writeSystemVerilog nand2LayoutTop

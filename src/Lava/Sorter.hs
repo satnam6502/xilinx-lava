@@ -34,16 +34,13 @@ type family ToExpNat (n :: N) :: Nat where
             ToExpNat (Succ n) = 2 * ToExpNat n
 
 
--- A butterfly of degree n maps 2^n inputs to 2^n outputs.
 class Bfly (n :: N) where
   bfly :: forall m bit . Hardware m bit => (Array '[2] (Array '[4] bit) -> m (Array '[2] (Array '[4] bit))) ->
                                            Array '[ToExpNat n] (Array '[4] bit) -> m (Array '[ToExpNat n] (Array '[4] bit) )
 
--- A butterfly of degree 1 is just the r component i.e. it maps 2 inputs to 2 outputs.
 instance Bfly One where
-  bfly r a = r a
+  bfly r = r
 
--- A butterfly of degree n is recursively defined in terms of two smaller butterflies of degree (n-1).
 instance (KnownNat (ToExpNat n), Bfly n) => Bfly (Succ n) where
   bfly r = ilv (bfly @n r) >-> evens r
 
@@ -52,14 +49,9 @@ class BatchersSorter (n :: N) where
                                       Array '[ToExpNat n] (Array '[4] bit) -> m (Array '[ToExpNat n] (Array '[4] bit) )
 
 instance BatchersSorter One where
-  batchersSorter :: Hardware m bit => (Array '[2] (Array '[4] bit) -> m (Array '[2] (Array '[4] bit))) ->
-                                       Array '[ToExpNat 'One] (Array '[4] bit) -> m (Array '[ToExpNat 'One] (Array '[4] bit))
   batchersSorter sorter2 = sorter2
 
 instance (KnownNat (ToExpNat n), Bfly n, BatchersSorter n) => BatchersSorter (Succ n) where
-  batchersSorter :: (KnownNat (ToExpNat n), Bfly n, BatchersSorter n, Hardware m bit) =>
-                    (Array '[2] (Array '[4] bit) -> m (Array '[2] (Array '[4] bit))) ->
-                    Array '[ToExpNat ('Succ n)] (Array '[4] bit) -> m (Array '[ToExpNat ('Succ n)] (Array '[4] bit))
   batchersSorter sorter2 = two (batchersSorter @n sorter2) >-> sndRev >-> bfly @(Succ n) sorter2
 
 sndRev :: forall a n m. (KnownNat n, Monad m) => Array '[2 * n] a -> m (Array '[2 * n] a)
@@ -154,4 +146,28 @@ sorter64Top
        setActiveLowResetNet "rstN"
        a :: Array '[4] (Net Bit)  <- inputVec "a" BitType
        b <- sorter64 (fromList (replicate 64 a))
+       outputVec "b" (unScalar (b `index` 0)) BitType
+
+sorter128 :: Hardware m bit => Array '[128] (Array '[4] bit) -> m (Array '[128] (Array '[4] bit))
+sorter128 = pipelinedSorter @(Succ (Succ (Succ (Succ (Succ (Succ One))))))
+
+sorter128Top :: RTL ()
+sorter128Top
+  = do setModuleName "sorter128"
+       setClockNet "clk"
+       setActiveLowResetNet "rstN"
+       a :: Array '[4] (Net Bit)  <- inputVec "a" BitType
+       b <- sorter128 (fromList (replicate 128 a))
+       outputVec "b" (unScalar (b `index` 0)) BitType
+
+sorter256 :: Hardware m bit => Array '[256] (Array '[4] bit) -> m (Array '[256] (Array '[4] bit))
+sorter256 = pipelinedSorter @(Succ (Succ (Succ (Succ (Succ (Succ (Succ One)))))))
+
+sorter256Top :: RTL ()
+sorter256Top
+  = do setModuleName "sorter256"
+       setClockNet "clk"
+       setActiveLowResetNet "rstN"
+       a :: Array '[4] (Net Bit)  <- inputVec "a" BitType
+       b <- sorter256 (fromList (replicate 256 a))
        outputVec "b" (unScalar (b `index` 0)) BitType
